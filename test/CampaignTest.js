@@ -11,6 +11,8 @@ async function deployFixture() {
   // deploy your ERC20 (owner = deployer)
   const ERC20 = await ethers.getContractFactory("ERC20");
   const token = await ERC20.deploy();
+  await token.waitForDeployment();
+  const tokenAddr = await token.getAddress();
 
   // mint funds to donors
   const ONE = 10n ** 18n;
@@ -20,6 +22,7 @@ async function deployFixture() {
   // deploy campaign factory 
   const Factory = await ethers.getContractFactory("CampaignFactory");
   const factory = await Factory.deploy();
+  await factory.waitForDeployment();
 
   // create a campaign (3 milestones: 50/30/20)
   const now = await time.latest();
@@ -37,7 +40,7 @@ async function deployFixture() {
   const Campaign = await ethers.getContractFactory("Campaign");
   const campaign = await Campaign.attach(campaignAddr);
 
-  return { deployer, organizer, verifier, alice, bob, random, token, factory, campaign, ONE, deadline, tranches };
+  return { deployer, organizer, verifier, alice, bob, random, token, tokenAddr, factory, campaign, ONE, deadline, tranches };
 }
 
 describe("Campaign (token-only escrow)", function () {
@@ -157,7 +160,7 @@ describe("Campaign (token-only escrow)", function () {
   });
 
   it("reverts: donate after deadline", async () => {
-  const { deployer, organizer, verifier, token, factory } = await loadFixture(deployFixture);
+  const { deployer, organizer, verifier, tokenAddr, factory } = await loadFixture(deployFixture);
 
   // create a campaign with a valid (near-future) deadline
   const now = await time.latest();
@@ -166,10 +169,10 @@ describe("Campaign (token-only escrow)", function () {
 
   const tx = await factory
     .connect(organizer)
-    .create("cid", token.address, verifier.address, tranches, nearFuture);
+    .create("cid", tokenAddr, verifier.address, tranches, nearFuture);
 
   const rc = await tx.wait();
-  const ev = rc.events.find((e) => e.event === "CampaignCreated");
+  const ev = rc.logs.find(l => l.fragment && l.fragment.name === "CampaignCreated");
   const campaignAddr = ev.args.campaign;
   const campaign = await ethers.getContractAt("Campaign", campaignAddr);
 
