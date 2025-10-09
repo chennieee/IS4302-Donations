@@ -1,4 +1,3 @@
-// src/components/CampaignStatus.jsx
 export default function CampaignStatus() {
   return (
     <section className="rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 p-6 md:p-8">
@@ -28,11 +27,6 @@ export default function CampaignStatus() {
 
       {/* CTA row */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <button
-          className="inline-flex items-center justify-center rounded-lg bg-cyan-500 px-4 py-2 text-white text-sm font-semibold shadow-sm hover:bg-cyan-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 active:bg-cyan-700 transition"
-        >
-          Refundable now
-        </button>
         <span className="text-xs font-medium text-cyan-700 bg-cyan-50 border border-cyan-200 rounded-md px-2 py-1">
             Deadline: 24 Nov 2025
         </span>
