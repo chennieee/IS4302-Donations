@@ -16,10 +16,10 @@ contract Campaign is ReentrancyGuard {
         uint256 goal;
     }
 
-    address owner;
-    uint256 deadline; //TODO3
-    string name;
-    Milestone[] milestones;
+    address public owner;
+    uint256 public deadline;
+    string public name;
+    Milestone[] public milestones;
     uint256 public amountRaised;
 
     constructor(
@@ -36,17 +36,5 @@ contract Campaign is ReentrancyGuard {
         for (uint256 i = 0; i < _goals.length; i++) {
             milestones.push(Milestone(Status.Pending, _goals[i]));
         }
-    }
-
-    function getOwner() public view returns (address) {
-        return owner;
-    }
-
-    function getDeadline() public view returns (uint256) {
-        return deadline;
-    }
-
-    function getName() public view returns (string memory) {
-        return name;
     }
 }
