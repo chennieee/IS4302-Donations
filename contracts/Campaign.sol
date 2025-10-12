@@ -35,7 +35,8 @@ contract Campaign is ReentrancyGuard {
         name = _name;
         deadline = _deadline;
 
-        for (uint256 i = 0; i < _goals.length; i++) {
+        uint256 len = _goals.length;
+        for (uint256 i = 0; i < len; i++) {
             milestones.push(Milestone(Status.Pending, _goals[i]));
         }
     }
