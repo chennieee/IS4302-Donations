@@ -15,7 +15,6 @@ abstract contract ReentrancyGuardLite {
 
 contract Campaign is ReentrancyGuardLite {
     struct Milestone{
-        uint256 end;
         string name;
         string description;
         milestoneStatus status;
