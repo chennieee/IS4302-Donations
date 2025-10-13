@@ -11,24 +11,30 @@ contract CampaignFactory {
         address organizer,
         address campaign,
         string name,
-        uint256 deadline
+        uint256 deadline,
+        uint256 goal
     );
     
-    function create(string memory name, uint256 timeDays) public returns(address) {
+    function create(string memory name, uint256 timeDays, uint256 goal) public returns(address) {
         require(timeDays > 0, "Input a valid number of days for this campaign to last");
         uint256 deadline = block.timestamp + (timeDays * 24 * 3600);
-        Campaign newCampaign = new Campaign(msg.sender, deadline, name);
+        Campaign newCampaign = new Campaign(msg.sender, deadline, name, goal);
         address campaignAddress = address(newCampaign);
         allCampaigns.push(campaignAddress);
-        emit CampaignCreated(msg.sender, campaignAddress, name, deadline);
+        emit CampaignCreated(msg.sender, campaignAddress, name, deadline, goal);
         return campaignAddress;
     }
 
     // -------- Views --------
-    function getCampaigns() public view returns (address[] memory) {
+    function getAllCampaigns() public view returns (address[] memory) {
         return allCampaigns;
     }
     function campaignsCount() public view returns (uint256) {
         return allCampaigns.length;
+    }
+
+    function getCampaign(uint256 index) public view returns (address) {
+        require(index < allCampaigns.length, "not a valid index");
+        return allCampaigns[index];
     }
 }
