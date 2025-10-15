@@ -22,6 +22,7 @@ contract Campaign is ReentrancyGuard {
     string public name;
     Milestone[] public milestones;
     mapping(address => uint256) private contributions;
+    uint256 public totalRaised = 0;
 
     constructor(
         address _owner,
@@ -67,9 +68,12 @@ contract Campaign is ReentrancyGuard {
         _;
     }
 
-    function donate(uint256 sgdAmount) external nonReentrant {
-        require(sgdAmount > 0, "Donations have to be greater than 0!");
-        contributions[msg.sender] += sgdAmount;
+    // Only accept denominations of 1 eth for now
+    function donate() external payable nonReentrant {
+        uint256 ethAmount = msg.value / 1 ether;
+        require(ethAmount >= 1, "Donations have to be at least 1 eth!");
+        contributions[msg.sender] += ethAmount;
+        totalRaised += ethAmount;
     }
 
     function approveMilestone(
