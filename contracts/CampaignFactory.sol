@@ -5,7 +5,6 @@ import "./Campaign.sol";
 
 contract CampaignFactory {
     address[] public allCampaigns;
-    address public owner;
 
     event CampaignCreated(
         address organizer,
@@ -14,10 +13,6 @@ contract CampaignFactory {
         uint256 deadline,
         uint256[] goals
     );
-
-    constructor(address _owner) {
-        owner = _owner;
-    }
 
     function create(
         string memory name,
