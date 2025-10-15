@@ -21,6 +21,7 @@ contract CampaignFactory {
 
     function create(
         string memory name,
+        address[] memory verifiers,
         uint256 timeDays,
         uint256[] memory goals
     ) public returns (address) {
@@ -31,7 +32,7 @@ contract CampaignFactory {
         uint256 deadline = block.timestamp + (timeDays * 24 * 3600);
         Campaign newCampaign = new Campaign(
             msg.sender,
-            owner,
+            verifiers,
             deadline,
             name,
             goals

@@ -17,7 +17,7 @@ contract Campaign is ReentrancyGuard {
     }
 
     address public owner;
-    address public verifier;
+    mapping(address => bool) public verifiers;
     uint256 public deadline;
     string public name;
     Milestone[] public milestones;
@@ -25,25 +25,29 @@ contract Campaign is ReentrancyGuard {
 
     constructor(
         address _owner,
-        address _verifier,
+        address[] memory _verifiers,
         uint256 _deadline,
         string memory _name,
         uint256[] memory _goals
     ) {
         owner = _owner;
-        verifier = _verifier;
         name = _name;
         deadline = _deadline;
 
-        uint256 len = _goals.length;
-        for (uint256 i = 0; i < len; i++) {
+        uint256 vLen = _verifiers.length;
+        for (uint i = 0; i < vLen; i++) {
+            verifiers[_verifiers[i]] = true;
+        }
+
+        uint256 gLen = _goals.length;
+        for (uint256 i = 0; i < gLen; i++) {
             milestones.push(Milestone(Status.Pending, _goals[i]));
         }
     }
 
     modifier onlyVerifier() {
         require(
-            msg.sender == verifier,
+            verifiers[msg.sender],
             "Only the verifier is authorized to call this!"
         );
         _;
