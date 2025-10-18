@@ -4,110 +4,108 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract Campaign is ReentrancyGuard {
-    enum Status {
-        Approved,
-        Pending,
-        Rejected,
-        Released
-    }
-
-    struct Milestone {
-        Status status;
-        uint256 goal;
-    }
-
     address public owner;
     mapping(address => bool) public verifiers;
     uint256 public deadline;
     string public name;
-    Milestone[] public milestones;
+    uint256[] public milestones;
     mapping(address => uint256) private contributions;
     uint256 public totalRaised = 0;
+    uint256 public currentProposal = 0;
 
     constructor(
         address _owner,
         address[] memory _verifiers,
         uint256 _deadline,
         string memory _name,
-        uint256[] memory _goals
+        uint256[] memory _milestones
     ) {
         owner = _owner;
         name = _name;
         deadline = _deadline;
 
-        uint256 vLen = _verifiers.length;
-        for (uint i = 0; i < vLen; i++) {
+        uint256 len = _verifiers.length;
+        for (uint i = 0; i < len; i++) {
             verifiers[_verifiers[i]] = true;
         }
 
-        uint256 gLen = _goals.length;
-        for (uint256 i = 0; i < gLen; i++) {
-            milestones.push(Milestone(Status.Pending, _goals[i]));
+        len = _milestones.length;
+        for (uint256 i = 0; i < len; i++) {
+            addMilestone(_milestones[i]);
         }
+    }
+
+    modifier withinDeadline() {
+        require(block.timestamp < deadline, "Campaign has ended!");
+        _;
     }
 
     modifier onlyVerifier() {
         require(
             verifiers[msg.sender],
-            "Only the verifier is authorized to call this!"
+            "Only a verifier is authorized to call this!"
         );
         _;
     }
 
-    // Check that a selected milestone is within range and, has the expected status
-    modifier validMilestoneIdx(uint256 idx) {
-        require(idx < milestones.length, "Invalid milestone index!");
-        _;
-    }
-
-    modifier hasMilestoneStatus(uint256 idx, Status s) {
+    modifier onlyOwner() {
         require(
-            milestones[idx].status == s,
-            "Milestone has unexpected status!"
+            msg.sender == owner,
+            "Only the owner is authorized to call this!"
         );
+        _;
+    }
+
+    // New milestone must be greater than current milestone and totalRaised must exceed current milestone
+    modifier validNewMilestone(uint256 milestone) {
+        uint256 len = milestones.length;
+        require(
+            len == 0 ||
+                (milestone > milestones[len - 1] &&
+                    milestones[len - 1] <= totalRaised),
+            "New milestone should be greater than current milestone!"
+        );
+        _;
+    }
+
+    modifier hasProposal() {
+        require(currentProposal != 0, "No proposal in progress!");
         _;
     }
 
     // Only accept denominations of 1 eth for now
-    function donate() external payable nonReentrant {
+    function donate() external payable nonReentrant withinDeadline {
         uint256 ethAmount = msg.value / 1 ether;
         require(ethAmount >= 1, "Donations have to be at least 1 eth!");
         contributions[msg.sender] += ethAmount;
         totalRaised += ethAmount;
     }
 
-    function approveMilestone(
-        uint256 i
-    )
-        external
-        onlyVerifier
-        validMilestoneIdx(i)
-        hasMilestoneStatus(i, Status.Pending)
-    {
-        milestones[i].status = Status.Approved;
+    function addMilestone(
+        uint256 newMilestone
+    ) public validNewMilestone(newMilestone) withinDeadline {
+        milestones.push(newMilestone);
     }
 
-    function rejectMilestone(
-        uint256 i
-    )
-        external
-        onlyVerifier
-        validMilestoneIdx(i)
-        hasMilestoneStatus(i, Status.Pending)
-    {
-        milestones[i].status = Status.Rejected;
+    function proposeNewMilestone(
+        uint256 newMilestone
+    ) external onlyOwner validNewMilestone(newMilestone) {
+        require(currentProposal == 0, "Wait for current proposal to complete!");
+        currentProposal = newMilestone;
     }
 
-    function releaseMilestone(
-        uint256 i
-    )
-        external
-        onlyVerifier
-        validMilestoneIdx(i)
-        hasMilestoneStatus(i, Status.Approved)
-    {
-        milestones[i].status = Status.Released;
-
-        // TODO: Transfer to owner
+    function acceptProposal() external onlyVerifier hasProposal nonReentrant {
+        addMilestone(currentProposal);
+        currentProposal = 0;
     }
+
+    function rejectProposal() external onlyVerifier hasProposal {
+        currentProposal = 0;
+    }
+
+    // TODO
+    function releaseFunds() external onlyVerifier {}
+
+    // TODO
+    function returnFunds() external onlyVerifier {}
 }

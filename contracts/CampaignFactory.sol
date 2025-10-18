@@ -11,14 +11,14 @@ contract CampaignFactory {
         address campaign,
         string name,
         uint256 deadline,
-        uint256[] goals
+        uint256[] milestones
     );
 
     function create(
         string memory name,
         address[] memory verifiers,
         uint256 timeDays,
-        uint256[] memory goals
+        uint256[] memory milestones
     ) public returns (address) {
         require(
             timeDays > 0,
@@ -30,7 +30,7 @@ contract CampaignFactory {
             verifiers,
             deadline,
             name,
-            goals
+            milestones
         );
         address campaignAddress = address(newCampaign);
         allCampaigns.push(campaignAddress);
@@ -39,7 +39,7 @@ contract CampaignFactory {
             campaignAddress,
             name,
             deadline,
-            goals
+            milestones
         );
         return campaignAddress;
     }
