@@ -1,99 +1,111 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-// for safety 
-abstract contract ReentrancyGuardLite {
-    uint256 private _status;
-    constructor() { _status = 1; }
-    modifier nonReentrant() {
-        require(_status == 1, "Reentrancy");
-        _status = 2;
-        _;
-        _status = 1;
-    }
-}
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract Campaign is ReentrancyGuardLite {
-    struct Milestone{
-        string name;
-        string description;
-        milestoneStatus status;
-    }
+contract Campaign is ReentrancyGuard {
+    address public owner;
+    mapping(address => bool) public verifiers;
+    uint256 public deadline;
+    string public name;
+    uint256[] public milestones;
+    mapping(address => uint256) private contributions;
+    uint256 public totalRaised = 0;
+    uint256 public currentProposal = 0;
 
-    enum milestoneStatus { Pending, Approved, Released, Rejected }
-    enum campaignStatus {Ongoing, Terminated, Completed}
-
-    event DonationReceived(address donor, uint256 amount);
-    event MilestoneApproved(uint256 index, string name, string description); //TODO1
-    event Refunded(uint256 amount); //TODO2
-
-    address owner;
-    uint256 deadline; //TODO3
-    string name;
-    Milestone[] public milestone; // array of milestones and events for the milestones TODO1
-    address[] public verifiers; // TODO4
-    uint256 goal; // in ether, easier to manage
-    uint256 totalRaised = 0;
-    campaignStatus status;
-    // mapping(address=>uint256) contributed (later do with refund code) TODO2
-
-    constructor (address _owner, uint256 _deadline, string memory _name, uint256 _goal) {
+    constructor(
+        address _owner,
+        address[] memory _verifiers,
+        uint256 _deadline,
+        string memory _name,
+        uint256[] memory _milestones
+    ) {
         owner = _owner;
         name = _name;
         deadline = _deadline;
-        goal = _goal;
-        verifiers.push(owner);
-        status = campaignStatus.Ongoing;
+
+        uint256 len = _verifiers.length;
+        for (uint i = 0; i < len; i++) {
+            verifiers[_verifiers[i]] = true;
+        }
+
+        len = _milestones.length;
+        for (uint256 i = 0; i < len; i++) {
+            addMilestone(_milestones[i]);
+        }
     }
 
-    modifier isOngoing() {
-        if (status == campaignStatus.Ongoing && block.timestamp >= deadline){
-            status = campaignStatus.Terminated;
-        }
-        require(status == campaignStatus.Ongoing, "Campaign is not ongoing anymore!");
+    modifier withinDeadline() {
+        require(block.timestamp < deadline, "Campaign has ended!");
         _;
     }
 
-    //TODO5 fallback function
-    function donate() public payable isOngoing(){
-        uint256 donationAmount = msg.value / 1 ether;
-        require(donationAmount >= 1, "Minimum donation is 1 ether, donations are in the base value of 1 ether");
-        uint256 excess = msg.value % 1 ether;
-        payable(msg.sender).transfer(excess);
-        totalRaised += donationAmount;
-        emit DonationReceived(msg.sender, donationAmount);
-        if (totalRaised >= goal){
-            status = campaignStatus.Completed;
-            //EMIT CAMPAIGN COMPLETED;
-        }
+    modifier onlyVerifier() {
+        require(
+            verifiers[msg.sender],
+            "Only a verifier is authorized to call this!"
+        );
+        _;
     }
 
-    function getOwner() public view returns(address){
-        return owner;
+    modifier onlyOwner() {
+        require(
+            msg.sender == owner,
+            "Only the owner is authorized to call this!"
+        );
+        _;
     }
 
-    function getDeadline() public view returns(uint256){
-        return deadline;
+    // New milestone must be greater than current milestone and totalRaised must exceed current milestone
+    modifier validNewMilestone(uint256 milestone) {
+        uint256 len = milestones.length;
+        require(
+            len == 0 ||
+                (milestone > milestones[len - 1] &&
+                    milestones[len - 1] <= totalRaised),
+            "New milestone should be greater than current milestone!"
+        );
+        _;
     }
 
-    function getGoal() public view returns(uint256){
-        return goal;
+    modifier hasProposal() {
+        require(currentProposal != 0, "No proposal in progress!");
+        _;
     }
 
-    function getTotalRaised() public view returns(uint256){
-        return totalRaised;
+    // Only accept denominations of 1 eth for now
+    function donate() external payable nonReentrant withinDeadline {
+        uint256 ethAmount = msg.value / 1 ether;
+        require(ethAmount >= 1, "Donations have to be at least 1 eth!");
+        contributions[msg.sender] += ethAmount;
+        totalRaised += ethAmount;
     }
 
-    function getStatus() public view returns(campaignStatus){
-        return status;
+    function addMilestone(
+        uint256 newMilestone
+    ) public validNewMilestone(newMilestone) withinDeadline {
+        milestones.push(newMilestone);
     }
 
-    function getName() public view returns(string memory){
-        return name;
+    function proposeNewMilestone(
+        uint256 newMilestone
+    ) external onlyOwner validNewMilestone(newMilestone) {
+        require(currentProposal == 0, "Wait for current proposal to complete!");
+        currentProposal = newMilestone;
     }
 
-    // deadline functions TODO3
-    //milestone functions TODO1
-    //let owner do be able to do all the setting up milestones while totalRaise is 0 for now
-    //we can add more options in the modifiers after
+    function acceptProposal() external onlyVerifier hasProposal nonReentrant {
+        addMilestone(currentProposal);
+        currentProposal = 0;
+    }
+
+    function rejectProposal() external onlyVerifier hasProposal {
+        currentProposal = 0;
+    }
+
+    // TODO
+    function releaseFunds() external onlyVerifier {}
+
+    // TODO
+    function returnFunds() external onlyVerifier {}
 }
