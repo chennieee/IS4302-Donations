@@ -1,20 +1,35 @@
-import CampaignStatus from './components/CampaignStatus'
+import { useState } from 'react'
+import reactLogo from './assets/react.svg'
+import viteLogo from '/vite.svg'
+import './App.css'
 
-export default function App() {
+function App() {
+  const [count, setCount] = useState(0)
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
-      <header className="sticky top-0 z-10 bg-white/70 backdrop-blur border-b border-slate-200">
-        <div className="mx-auto max-w-5xl px-5 py-3 flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">Micro-Donations</h1>
-          <span className="inline-flex items-center gap-2 text-xs text-slate-600">
-            <span className="size-2 rounded-full bg-emerald-500" /> Sepolia (testnet)
-          </span>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-5 py-8">
-        <CampaignStatus />
-      </main>
-    </div>
+    <>
+      <div>
+        <a href="https://vite.dev" target="_blank">
+          <img src={viteLogo} className="logo" alt="Vite logo" />
+        </a>
+        <a href="https://react.dev" target="_blank">
+          <img src={reactLogo} className="logo react" alt="React logo" />
+        </a>
+      </div>
+      <h1>Vite + React</h1>
+      <div className="card">
+        <button onClick={() => setCount((count) => count + 1)}>
+          count is {count}
+        </button>
+        <p>
+          Edit <code>src/App.jsx</code> and save to test HMR
+        </p>
+      </div>
+      <p className="read-the-docs">
+        Click on the Vite and React logos to learn more
+      </p>
+    </>
   )
 }
+
+export default App
