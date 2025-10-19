@@ -28,17 +28,14 @@ export const api = {
     getCampaign: (addr) => jget(backendUrl, `/campaigns/${addr}`),
 
     // donation & refunds (contract calls performed by backend)
-    donate: ({ fromAddress, campaignAddress, amount }) => 
-        jpost(backendUrl, '/donations', { fromAddress, campaignAddress, amount }),
+    donate: ({ fromAddress, campaignAddress, amountEth }) => 
+        jpost(backendUrl, '/donations', { fromAddress, campaignAddress, amountEth }),
 
-    refund: ({ fromAddress, campaignAddress, amount }) =>
-        jpost(backendUrl, '/refunds', { fromAddress, campaignAddress, amount }),
+    refund: ({ fromAddress, campaignAddress, amountEth }) =>
+        jpost(backendUrl, '/refunds', { fromAddress, campaignAddress, amountEth }),
 
     // notifications for a given wallet
     notifications: (addr) => jget(backendUrl, `/notifications?address=${addr}`),
-
-    // Unitoken
-    unitoken: (addr) => jget(backendUrl, `/unitoken/${addr}`),
 
     // verification
     verification: (addr) => jget(backendUrl, `/verification/${addr}`)
