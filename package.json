@@ -1,5 +1,5 @@
 {
-  "name": "donations",
+  "name": "IS4302-Donations",
   "version": "1.0.0",
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
@@ -13,9 +13,12 @@
     "@typechain/hardhat": "^9.1.0",
     "chai": "^4.5.0",
     "ethers": "^6.15.0",
-    "hardhat": "^2.22.5",
+    "hardhat": "^2.26.3",
     "hardhat-gas-reporter": "^2.3.0",
     "solidity-coverage": "^0.8.16",
     "typechain": "^8.3.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "4.9.3"
   }
 }
