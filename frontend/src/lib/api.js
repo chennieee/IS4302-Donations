@@ -27,12 +27,9 @@ export const api = {
     listCampaigns: () => jget(backendUrl, '/campaigns'),
     getCampaign: (addr) => jget(backendUrl, `/campaigns/${addr}`),
 
-    // donation & refunds (contract calls performed by backend)
+    // donation (contract calls performed by backend)
     donate: ({ fromAddress, campaignAddress, amountEth }) => 
         jpost(backendUrl, '/donations', { fromAddress, campaignAddress, amountEth }),
-
-    refund: ({ fromAddress, campaignAddress, amountEth }) =>
-        jpost(backendUrl, '/refunds', { fromAddress, campaignAddress, amountEth }),
 
     // notifications for a given wallet
     notifications: (addr) => jget(backendUrl, `/notifications?address=${addr}`),
