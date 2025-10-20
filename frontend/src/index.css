@@ -4,67 +4,87 @@
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
+  color: #0f172a;          
+  background: #ffffff;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
-  min-height: 100vh;
+  background: #fff;
+  color: #0f172a;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; }
+
+h1, h2, h3, h4 { margin: 0; }
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
 }
-button:hover {
-  border-color: #646cff;
+@media (max-width: 1024px) {
+  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+@media (max-width: 640px) {
+  .grid-3 { grid-template-columns: 1fr; }
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+.h1-lean {
+  font-size: 28px;             
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 8px 0 16px;
+}
+
+.border        { border: 1px solid #e2e8f0; }
+.rounded-xl    { border-radius: 12px; }
+.rounded-2xl   { border-radius: 16px; }
+.shadow-sm     { box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.hover\:shadow-sm:hover { box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+.p-2 { padding: .5rem; } .p-4 { padding: 1rem; } .p-6 { padding: 1.5rem; }
+.space-y-4 > * + * { margin-top: 1rem; }
+.text-sm { font-size: .875rem; } .text-lg { font-size: 1.125rem; }
+.text-2xl { font-size: 1.5rem; } .text-3xl { font-size: 1.875rem; }
+.font-bold { font-weight: 700; } .font-extrabold { font-weight: 800; }
+.opacity-50 { opacity: .5; } .opacity-70 { opacity: .7; } .opacity-80 { opacity: .8; }
+
+.w-full { width: 100%; }
+.h-48 { height: 12rem; }          
+.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.skel-card { height: 320px; border-radius: 16px; }
+.animate-pulse { animation: pulse 2s cubic-bezier(.4,0,.6,1) infinite; }
+@keyframes pulse { 50% { opacity: .5; } }
+
+button.base {
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 8px 14px;
+}
+button.base:hover { background: #f1f5f9; }
+
+/* Optional: dark scheme if your OS is dark. You can delete this block. */
+@media (prefers-color-scheme: dark) {
+  :root { background: #0b1220; color: #e5e7eb; }
+  .border { border-color: #243041; }
+  .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,.35); }
 }
