@@ -6,7 +6,6 @@ async function main() {
     const campaignFactory = await CampaignFactory.deploy();
     await campaignFactory.waitForDeployment();
     console.log("CampaignFactory deployed to: ", await campaignFactory.getAddress());
-
 }
 
 main()
