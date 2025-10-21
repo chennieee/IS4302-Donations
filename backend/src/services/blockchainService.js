@@ -9,15 +9,27 @@ class BlockchainService {
 
     // Contract ABIs - these would normally come from your contracts build
     this.factoryABI = [
-      "event CampaignCreated(address indexed campaign, address indexed organizer, string ipfsCid, address token, address verifier, uint256[] trancheBps, uint256 deadline)"
+      "event CampaignCreated(address organizer, address campaign, string name, uint256 deadline, uint256[] milestones)",
+      "function getAllCampaigns() view returns (address[])",
+      "function campaignsCount() view returns (uint256)",
+      "function getCampaign(uint256 index) view returns (address)"
     ];
 
     this.campaignABI = [
       "event DonationReceived(address indexed donor, uint256 amount)",
-      "event MilestoneApproved(uint256 indexed milestoneIndex)",
-      "event MilestoneRejected(uint256 indexed milestoneIndex)",
-      "event MilestoneReleased(uint256 indexed milestoneIndex, uint256 amount)",
-      "event Refunded(address indexed donor, uint256 amount)"
+      "event MilestoneAdded(uint256 milestone, uint256 index)",
+      "event MilestoneProposed(uint256 milestone)",
+      "event MilestoneAccepted(uint256 milestone)",
+      "event MilestoneRejected(uint256 milestone)",
+      "event FundsReleased(uint256 amount, uint256 milestoneIndex)",
+      "event FundsReturned(address indexed donor, uint256 amount)",
+      "function owner() view returns (address)",
+      "function verifiers(address) view returns (bool)",
+      "function deadline() view returns (uint256)",
+      "function name() view returns (string)",
+      "function milestones(uint256) view returns (uint256)",
+      "function totalRaised() view returns (uint256)",
+      "function currentProposal() view returns (uint256)"
     ];
 
     this.factoryContract = new ethers.Contract(
@@ -80,10 +92,12 @@ class BlockchainService {
 
       const eventFilters = [
         campaignContract.filters.DonationReceived(),
-        campaignContract.filters.MilestoneApproved(),
+        campaignContract.filters.MilestoneAdded(),
+        campaignContract.filters.MilestoneProposed(),
+        campaignContract.filters.MilestoneAccepted(),
         campaignContract.filters.MilestoneRejected(),
-        campaignContract.filters.MilestoneReleased(),
-        campaignContract.filters.Refunded()
+        campaignContract.filters.FundsReleased(),
+        campaignContract.filters.FundsReturned()
       ];
 
       const allLogs = [];
@@ -121,13 +135,12 @@ class BlockchainService {
         address: log.address,
         eventName: 'CampaignCreated',
         args: {
-          campaign: parsed.args.campaign,
           organizer: parsed.args.organizer,
-          ipfsCid: parsed.args.ipfsCid,
-          token: parsed.args.token,
-          verifier: parsed.args.verifier,
-          trancheBps: parsed.args.trancheBps.map(bp => bp.toString()),
-          deadline: parsed.args.deadline.toString()
+          campaign: parsed.args.campaign,
+          name: parsed.args.name,
+          deadline: parsed.args.deadline.toString(),
+          milestones: parsed.args.milestones.map(m => m.toString()),
+          verifiers: [] // Verifiers are not emitted in the event, need to query contract if needed
         }
       };
     } catch (error) {
@@ -159,11 +172,28 @@ class BlockchainService {
             }
           };
 
-        case 'MilestoneApproved':
+        case 'MilestoneAdded':
           return {
             ...baseLog,
             args: {
-              milestoneIndex: parsed.args.milestoneIndex.toString()
+              milestone: parsed.args.milestone.toString(),
+              index: parsed.args.index.toString()
+            }
+          };
+
+        case 'MilestoneProposed':
+          return {
+            ...baseLog,
+            args: {
+              milestone: parsed.args.milestone.toString()
+            }
+          };
+
+        case 'MilestoneAccepted':
+          return {
+            ...baseLog,
+            args: {
+              milestone: parsed.args.milestone.toString()
             }
           };
 
@@ -171,20 +201,20 @@ class BlockchainService {
           return {
             ...baseLog,
             args: {
+              milestone: parsed.args.milestone.toString()
+            }
+          };
+
+        case 'FundsReleased':
+          return {
+            ...baseLog,
+            args: {
+              amount: parsed.args.amount.toString(),
               milestoneIndex: parsed.args.milestoneIndex.toString()
             }
           };
 
-        case 'MilestoneReleased':
-          return {
-            ...baseLog,
-            args: {
-              milestoneIndex: parsed.args.milestoneIndex.toString(),
-              amount: parsed.args.amount.toString()
-            }
-          };
-
-        case 'Refunded':
+        case 'FundsReturned':
           return {
             ...baseLog,
             args: {
@@ -224,6 +254,49 @@ class BlockchainService {
       ethers.getAddress(address);
       return true;
     } catch {
+      return false;
+    }
+  }
+
+  async getCampaignDetails(campaignAddress) {
+    try {
+      const campaign = new ethers.Contract(
+        campaignAddress,
+        this.campaignABI,
+        this.provider
+      );
+
+      const [owner, deadline, name, totalRaised, currentProposal] = await Promise.all([
+        campaign.owner(),
+        campaign.deadline(),
+        campaign.name(),
+        campaign.totalRaised(),
+        campaign.currentProposal()
+      ]);
+
+      return {
+        owner,
+        deadline: deadline.toString(),
+        name,
+        totalRaised: totalRaised.toString(),
+        currentProposal: currentProposal.toString()
+      };
+    } catch (error) {
+      console.error(`Error fetching campaign details for ${campaignAddress}:`, error);
+      throw error;
+    }
+  }
+
+  async isVerifier(campaignAddress, verifierAddress) {
+    try {
+      const campaign = new ethers.Contract(
+        campaignAddress,
+        this.campaignABI,
+        this.provider
+      );
+      return await campaign.verifiers(verifierAddress);
+    } catch (error) {
+      console.error(`Error checking verifier status:`, error);
       return false;
     }
   }
