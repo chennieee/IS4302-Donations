@@ -30,33 +30,114 @@ class Database {
   }
 
   async createTables() {
-    // Only one table: events (denormalized)
-    const createEventsTable = `
-      CREATE TABLE IF NOT EXISTS events (
+    // Event log table (raw blockchain events)
+    const createEventLogTable = `
+      CREATE TABLE IF NOT EXISTS event_log (
         tx_hash TEXT NOT NULL,
         log_index INTEGER NOT NULL,
-        campaign_addr TEXT NOT NULL,
+        block_number INTEGER NOT NULL,
+        address TEXT NOT NULL,
         event_name TEXT NOT NULL,
         args_json TEXT NOT NULL,
-        block_number INTEGER NOT NULL,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        finalized BOOLEAN DEFAULT TRUE,
+        chain_id INTEGER NOT NULL,
+        finalized BOOLEAN DEFAULT FALSE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (tx_hash, log_index)
       )
     `;
+    await this.run(createEventLogTable);
 
-    await this.run(createEventsTable);
+    // Campaigns table
+    const createCampaignsTable = `
+      CREATE TABLE IF NOT EXISTS campaigns (
+        addr TEXT PRIMARY KEY,
+        organizer TEXT NOT NULL,
+        name TEXT NOT NULL,
+        deadline INTEGER NOT NULL,
+        milestones_json TEXT NOT NULL,
+        created_block INTEGER NOT NULL,
+        chain_id INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    await this.run(createCampaignsTable);
 
-    // Create indexes for better performance
-    const indexQueries = [
-      'CREATE INDEX IF NOT EXISTS idx_events_campaign ON events(campaign_addr)',
-      'CREATE INDEX IF NOT EXISTS idx_events_block ON events(block_number)',
-      'CREATE INDEX IF NOT EXISTS idx_events_name ON events(event_name)'
-    ];
+    // Verifiers table (many-to-many relationship)
+    const createVerifiersTable = `
+      CREATE TABLE IF NOT EXISTS verifiers (
+        campaign_addr TEXT NOT NULL,
+        verifier_addr TEXT NOT NULL,
+        PRIMARY KEY (campaign_addr, verifier_addr),
+        FOREIGN KEY (campaign_addr) REFERENCES campaigns(addr)
+      )
+    `;
+    await this.run(createVerifiersTable);
 
-    for (const query of indexQueries) {
-      await this.run(query);
-    }
+    // Milestones table
+    const createMilestonesTable = `
+      CREATE TABLE IF NOT EXISTS milestones (
+        campaign_addr TEXT NOT NULL,
+        idx INTEGER NOT NULL,
+        target_amount TEXT NOT NULL,
+        status TEXT NOT NULL,
+        accepted_at DATETIME,
+        released_at DATETIME,
+        amount_released TEXT DEFAULT '0',
+        PRIMARY KEY (campaign_addr, idx),
+        FOREIGN KEY (campaign_addr) REFERENCES campaigns(addr)
+      )
+    `;
+    await this.run(createMilestonesTable);
+
+    // Donations table
+    const createDonationsTable = `
+      CREATE TABLE IF NOT EXISTS donations (
+        tx_hash TEXT NOT NULL,
+        log_index INTEGER NOT NULL,
+        campaign_addr TEXT NOT NULL,
+        donor TEXT NOT NULL,
+        amount TEXT NOT NULL,
+        block_number INTEGER NOT NULL,
+        chain_id INTEGER NOT NULL,
+        finalized BOOLEAN DEFAULT FALSE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (tx_hash, log_index),
+        FOREIGN KEY (campaign_addr) REFERENCES campaigns(addr)
+      )
+    `;
+    await this.run(createDonationsTable);
+
+    // Refunds table
+    const createRefundsTable = `
+      CREATE TABLE IF NOT EXISTS refunds (
+        tx_hash TEXT NOT NULL,
+        log_index INTEGER NOT NULL,
+        campaign_addr TEXT NOT NULL,
+        donor TEXT NOT NULL,
+        amount TEXT NOT NULL,
+        block_number INTEGER NOT NULL,
+        chain_id INTEGER NOT NULL,
+        finalized BOOLEAN DEFAULT FALSE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (tx_hash, log_index),
+        FOREIGN KEY (campaign_addr) REFERENCES campaigns(addr)
+      )
+    `;
+    await this.run(createRefundsTable);
+
+    // Aggregates table (for quick queries)
+    const createAggregatesTable = `
+      CREATE TABLE IF NOT EXISTS aggregates (
+        campaign_addr TEXT PRIMARY KEY,
+        total_raised TEXT DEFAULT '0',
+        total_released TEXT DEFAULT '0',
+        current_proposal TEXT DEFAULT '0',
+        donor_count INTEGER DEFAULT 0,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (campaign_addr) REFERENCES campaigns(addr)
+      )
+    `;
+    await this.run(createAggregatesTable);
 
     // Indexer state table
     const createIndexerState = `
@@ -66,8 +147,25 @@ class Database {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `;
-
     await this.run(createIndexerState);
+
+    // Create indexes for better performance
+    const indexQueries = [
+      'CREATE INDEX IF NOT EXISTS idx_event_log_address ON event_log(address)',
+      'CREATE INDEX IF NOT EXISTS idx_event_log_block ON event_log(block_number)',
+      'CREATE INDEX IF NOT EXISTS idx_event_log_name ON event_log(event_name)',
+      'CREATE INDEX IF NOT EXISTS idx_campaigns_organizer ON campaigns(organizer)',
+      'CREATE INDEX IF NOT EXISTS idx_verifiers_verifier ON verifiers(verifier_addr)',
+      'CREATE INDEX IF NOT EXISTS idx_verifiers_campaign ON verifiers(campaign_addr)',
+      'CREATE INDEX IF NOT EXISTS idx_donations_campaign ON donations(campaign_addr)',
+      'CREATE INDEX IF NOT EXISTS idx_donations_donor ON donations(donor)',
+      'CREATE INDEX IF NOT EXISTS idx_refunds_campaign ON refunds(campaign_addr)',
+      'CREATE INDEX IF NOT EXISTS idx_refunds_donor ON refunds(donor)'
+    ];
+
+    for (const query of indexQueries) {
+      await this.run(query);
+    }
   }
 
   run(sql, params = []) {
@@ -104,6 +202,18 @@ class Database {
         }
       });
     });
+  }
+
+  async beginTransaction() {
+    return this.run('BEGIN TRANSACTION');
+  }
+
+  async commit() {
+    return this.run('COMMIT');
+  }
+
+  async rollback() {
+    return this.run('ROLLBACK');
   }
 
   async close() {

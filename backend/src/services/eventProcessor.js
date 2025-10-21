@@ -28,17 +28,23 @@ class EventProcessor {
         case 'DonationReceived':
           await this.processDonationReceived(eventLog);
           break;
-        case 'MilestoneApproved':
-          await this.processMilestoneApproved(eventLog);
+        case 'MilestoneAdded':
+          await this.processMilestoneAdded(eventLog);
+          break;
+        case 'MilestoneProposed':
+          await this.processMilestoneProposed(eventLog);
+          break;
+        case 'MilestoneAccepted':
+          await this.processMilestoneAccepted(eventLog);
           break;
         case 'MilestoneRejected':
           await this.processMilestoneRejected(eventLog);
           break;
-        case 'MilestoneReleased':
-          await this.processMilestoneReleased(eventLog);
+        case 'FundsReleased':
+          await this.processFundsReleased(eventLog);
           break;
-        case 'Refunded':
-          await this.processRefunded(eventLog);
+        case 'FundsReturned':
+          await this.processFundsReturned(eventLog);
           break;
         default:
           console.warn(`Unknown event type: ${eventLog.eventName}`);
@@ -72,38 +78,46 @@ class EventProcessor {
   }
 
   async processCampaignCreated(eventLog) {
-    const { campaign, organizer, ipfsCid, token, verifier, trancheBps, deadline } = eventLog.args;
+    const { organizer, campaign, name, deadline, milestones, verifiers } = eventLog.args;
 
     // Insert campaign
     await this.db.run(
       `INSERT OR REPLACE INTO campaigns
-       (addr, organizer, token, verifier, tranche_bps_json, deadline, ipfs_cid, created_block, chain_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (addr, organizer, name, deadline, milestones_json, created_block, chain_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         campaign.toLowerCase(),
         organizer.toLowerCase(),
-        token.toLowerCase(),
-        verifier.toLowerCase(),
-        JSON.stringify(trancheBps),
+        name,
         parseInt(deadline),
-        ipfsCid,
+        JSON.stringify(milestones),
         eventLog.blockNumber,
         config.blockchain.chainId
       ]
     );
 
-    // Initialize milestones
-    for (let i = 0; i < trancheBps.length; i++) {
+    // Insert verifiers if provided
+    if (verifiers && verifiers.length > 0) {
+      for (const verifier of verifiers) {
+        await this.db.run(
+          `INSERT OR REPLACE INTO verifiers (campaign_addr, verifier_addr) VALUES (?, ?)`,
+          [campaign.toLowerCase(), verifier.toLowerCase()]
+        );
+      }
+    }
+
+    // Initialize milestones tracking
+    for (let i = 0; i < milestones.length; i++) {
       await this.db.run(
-        `INSERT OR REPLACE INTO milestones (campaign_addr, idx, status) VALUES (?, ?, ?)`,
-        [campaign.toLowerCase(), i, 'Pending']
+        `INSERT OR REPLACE INTO milestones (campaign_addr, idx, target_amount, status) VALUES (?, ?, ?, ?)`,
+        [campaign.toLowerCase(), i, milestones[i], 'Pending']
       );
     }
 
     // Initialize aggregates
     await this.db.run(
       `INSERT OR REPLACE INTO aggregates
-       (campaign_addr, total_raised, total_released, donor_count)
+       (campaign_addr, total_raised, current_proposal, donor_count)
        VALUES (?, ?, ?, ?)`,
       [campaign.toLowerCase(), '0', '0', 0]
     );
@@ -134,50 +148,91 @@ class EventProcessor {
     await this.updateAggregates(campaignAddr);
   }
 
-  async processMilestoneApproved(eventLog) {
-    const { milestoneIndex } = eventLog.args;
+  async processMilestoneProposed(eventLog) {
+    const { milestone } = eventLog.args;
     const campaignAddr = eventLog.address.toLowerCase();
 
+    // Update current proposal in aggregates
     await this.db.run(
-      `UPDATE milestones
-       SET status = 'Approved', approved_at = CURRENT_TIMESTAMP
-       WHERE campaign_addr = ? AND idx = ?`,
-      [campaignAddr, parseInt(milestoneIndex)]
+      `UPDATE aggregates
+       SET current_proposal = ?
+       WHERE campaign_addr = ?`,
+      [milestone, campaignAddr]
     );
+  }
+
+  async processMilestoneAccepted(eventLog) {
+    const campaignAddr = eventLog.address.toLowerCase();
+
+    // The accepted milestone will trigger a MilestoneAdded event
+    // So we just need to clear the current proposal here
+    // The actual milestone will be added by processMilestoneAdded
+
+    // Clear current proposal
+    await this.db.run(
+      `UPDATE aggregates SET current_proposal = '0' WHERE campaign_addr = ?`,
+      [campaignAddr]
+    );
+  }
+
+  async processMilestoneAdded(eventLog) {
+    const { milestone, index } = eventLog.args;
+    const campaignAddr = eventLog.address.toLowerCase();
+
+    // Insert or update milestone tracking
+    // If this was from a proposal acceptance, it will already have 'Accepted' status
+    // Otherwise it's a new milestone being added
+    const existingMilestone = await this.db.get(
+      `SELECT status FROM milestones WHERE campaign_addr = ? AND idx = ?`,
+      [campaignAddr, parseInt(index)]
+    );
+
+    if (existingMilestone) {
+      // Update the target amount but keep the status
+      await this.db.run(
+        `UPDATE milestones SET target_amount = ? WHERE campaign_addr = ? AND idx = ?`,
+        [milestone, campaignAddr, parseInt(index)]
+      );
+    } else {
+      // New milestone
+      await this.db.run(
+        `INSERT INTO milestones (campaign_addr, idx, target_amount, status) VALUES (?, ?, ?, ?)`,
+        [campaignAddr, parseInt(index), milestone, 'Pending']
+      );
+    }
   }
 
   async processMilestoneRejected(eventLog) {
-    const { milestoneIndex } = eventLog.args;
     const campaignAddr = eventLog.address.toLowerCase();
 
+    // Just clear the current proposal
     await this.db.run(
-      `UPDATE milestones
-       SET status = 'Rejected'
-       WHERE campaign_addr = ? AND idx = ?`,
-      [campaignAddr, parseInt(milestoneIndex)]
+      `UPDATE aggregates SET current_proposal = '0' WHERE campaign_addr = ?`,
+      [campaignAddr]
     );
   }
 
-  async processMilestoneReleased(eventLog) {
-    const { milestoneIndex, amount } = eventLog.args;
+  async processFundsReleased(eventLog) {
+    const { amount, milestoneIndex } = eventLog.args;
     const campaignAddr = eventLog.address.toLowerCase();
 
+    // Update milestone status to Released
     await this.db.run(
       `UPDATE milestones
-       SET status = 'Released', released_at = CURRENT_TIMESTAMP, amount_released = ?
+       SET status = 'Released', amount_released = ?, released_at = CURRENT_TIMESTAMP
        WHERE campaign_addr = ? AND idx = ?`,
-      [amount, campaignAddr, parseInt(milestoneIndex)]
+      [amount, campaignAddr, milestoneIndex]
     );
 
     // Update aggregates
     await this.updateAggregates(campaignAddr);
   }
 
-  async processRefunded(eventLog) {
+  async processFundsReturned(eventLog) {
     const { donor, amount } = eventLog.args;
     const campaignAddr = eventLog.address.toLowerCase();
 
-    // Insert refund
+    // Insert refund record
     await this.db.run(
       `INSERT OR REPLACE INTO refunds
        (tx_hash, log_index, campaign_addr, donor, amount, block_number, chain_id, finalized)

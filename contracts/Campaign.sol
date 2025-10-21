@@ -13,6 +13,15 @@ contract Campaign is ReentrancyGuard {
     uint256 public totalRaised = 0;
     uint256 public currentProposal = 0;
 
+    // Events
+    event DonationReceived(address indexed donor, uint256 amount);
+    event MilestoneAdded(uint256 milestone, uint256 index);
+    event MilestoneProposed(uint256 milestone);
+    event MilestoneAccepted(uint256 milestone);
+    event MilestoneRejected(uint256 milestone);
+    event FundsReleased(uint256 amount, uint256 milestoneIndex);
+    event FundsReturned(address indexed donor, uint256 amount);
+
     constructor(
         address _owner,
         address[] memory _verifiers,
@@ -79,12 +88,14 @@ contract Campaign is ReentrancyGuard {
         require(ethAmount >= 1, "Donations have to be at least 1 eth!");
         contributions[msg.sender] += ethAmount;
         totalRaised += ethAmount;
+        emit DonationReceived(msg.sender, ethAmount);
     }
 
     function addMilestone(
         uint256 newMilestone
     ) public validNewMilestone(newMilestone) withinDeadline {
         milestones.push(newMilestone);
+        emit MilestoneAdded(newMilestone, milestones.length - 1);
     }
 
     function proposeNewMilestone(
@@ -92,15 +103,20 @@ contract Campaign is ReentrancyGuard {
     ) external onlyOwner validNewMilestone(newMilestone) {
         require(currentProposal == 0, "Wait for current proposal to complete!");
         currentProposal = newMilestone;
+        emit MilestoneProposed(newMilestone);
     }
 
     function acceptProposal() external onlyVerifier hasProposal nonReentrant {
+        uint256 acceptedMilestone = currentProposal;
         addMilestone(currentProposal);
         currentProposal = 0;
+        emit MilestoneAccepted(acceptedMilestone);
     }
 
     function rejectProposal() external onlyVerifier hasProposal {
+        uint256 rejectedMilestone = currentProposal;
         currentProposal = 0;
+        emit MilestoneRejected(rejectedMilestone);
     }
 
     // TODO

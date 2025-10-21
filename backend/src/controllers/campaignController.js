@@ -8,6 +8,7 @@ class CampaignController {
 
   async initialize() {
     await this.db.initialize();
+    await this.db.createTables();
   }
 
   // GET /campaigns
@@ -35,7 +36,7 @@ class CampaignController {
       }
 
       if (verifier) {
-        query += ' AND c.verifier = ?';
+        query += ' AND EXISTS (SELECT 1 FROM verifiers v WHERE v.campaign_addr = c.addr AND v.verifier_addr = ?)';
         params.push(verifier.toLowerCase());
       }
 
@@ -82,11 +83,9 @@ class CampaignController {
       const formattedCampaigns = campaigns.map(campaign => ({
         address: campaign.addr,
         organizer: campaign.organizer,
-        verifier: campaign.verifier,
-        token: campaign.token,
-        trancheBps: JSON.parse(campaign.tranche_bps_json),
+        name: campaign.name,
+        milestones: JSON.parse(campaign.milestones_json),
         deadline: campaign.deadline,
-        ipfsCid: campaign.ipfs_cid,
         createdBlock: campaign.created_block,
         totalRaised: campaign.total_raised || '0',
         totalReleased: campaign.total_released || '0',
@@ -125,9 +124,16 @@ class CampaignController {
         return res.status(404).json({ error: 'Campaign not found' });
       }
 
+      // Get verifiers
+      const verifiers = await this.db.all(`
+        SELECT verifier_addr
+        FROM verifiers
+        WHERE campaign_addr = ?
+      `, [address.toLowerCase()]);
+
       // Get milestone states
       const milestones = await this.db.all(`
-        SELECT idx, status, approved_at, released_at, amount_released
+        SELECT idx, target_amount, status, accepted_at, released_at, amount_released
         FROM milestones
         WHERE campaign_addr = ?
         ORDER BY idx ASC
@@ -145,11 +151,9 @@ class CampaignController {
       const response = {
         address: campaign.addr,
         organizer: campaign.organizer,
-        verifier: campaign.verifier,
-        token: campaign.token,
-        trancheBps: JSON.parse(campaign.tranche_bps_json),
+        verifiers: verifiers.map(v => v.verifier_addr),
+        name: campaign.name,
         deadline: campaign.deadline,
-        ipfsCid: campaign.ipfs_cid,
         createdBlock: campaign.created_block,
         totalRaised: campaign.total_raised || '0',
         totalReleased: campaign.total_released || '0',
@@ -157,8 +161,9 @@ class CampaignController {
         createdAt: campaign.created_at,
         milestones: milestones.map(m => ({
           index: m.idx,
+          targetAmount: m.target_amount,
           status: m.status,
-          approvedAt: m.approved_at,
+          acceptedAt: m.accepted_at,
           releasedAt: m.released_at,
           amountReleased: m.amount_released
         })),
