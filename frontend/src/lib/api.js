@@ -26,9 +26,10 @@ export const api = {
     // campaigns list + details (retrieved from backend)
     listCampaigns: () => jget(backendUrl, '/campaigns'),
     getCampaign: (addr) => jget(backendUrl, `/campaigns/${addr}`),
+    createCampaign: (data) => jpost(backendUrl, '/campaigns', data),
 
     // donation (contract calls performed by backend)
-    donate: ({ fromAddress, campaignAddress, amountEth }) => 
+    donate: ({ fromAddress, campaignAddress, amountEth }) =>
         jpost(backendUrl, '/donations', { fromAddress, campaignAddress, amountEth }),
 
     // notifications for a given wallet
@@ -36,7 +37,7 @@ export const api = {
 
     // verification
     verification: (addr) => jget(backendUrl, `/verification/${addr}`)
-    
+
 }
 
 export default api

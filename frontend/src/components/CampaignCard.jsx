@@ -3,13 +3,25 @@
 import { Link } from 'react-router-dom'
 
 export default function CampaignCard({ c }) {
-    const pct = c?.target
-        ? Math.min(100, Math.round((Number(c.totalRaised || 0) / Math.max(1, Number(c.target))) * 100))
+    // Calculate target from milestones (highest milestone)
+    const target = c?.milestones && c.milestones.length > 0
+        ? Math.max(...c.milestones.map(m => typeof m === 'number' ? m : parseFloat(m) || 0))
         : 0
 
+    const raised = parseFloat(c?.totalRaised || 0)
+    const pct = target > 0
+        ? Math.min(100, Math.round((raised / target) * 100))
+        : 0
+
+    // Determine status based on deadline and progress
+    const now = Math.floor(Date.now() / 1000)
+    const isExpired = c?.deadline && c.deadline < now
+    const isCompleted = pct >= 100
+    const status = isCompleted ? "completed" : isExpired ? "expired" : "in-progress"
+
     // Map status to a quick colour badge
-    const statusColour = c?.status === "success" ? "bg-green-500"
-                       : c?.status === "failed" ? "bg-red-500"
+    const statusColour = status === "completed" ? "bg-green-500"
+                       : status === "expired" ? "bg-red-500"
                        : "bg-yellow-500"
 
     return (
@@ -18,13 +30,13 @@ export default function CampaignCard({ c }) {
 
         <div className="p-4 space-y-2">
             <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg">{c?.title ?? 'Campaign'}</h2>
+            <h2 className="font-semibold text-lg">{c?.name ?? 'Campaign'}</h2>
             <span className={`text-xs text-white px-2 py-0.5 rounded ${statusColour}`}>
-                {c?.status ?? "in-progress"}
+                {status}
             </span>
             </div>
 
-            <p className="text-sm opacity-80 line-clamp-2">{c?.summary}</p>
+            <p className="text-sm opacity-80 line-clamp-2">{c?.description || 'No description available'}</p>
 
             <div className="text-sm">
             <div className="w-full h-2 bg-gray-200 rounded mb-1 overflow-hidden">
@@ -34,9 +46,9 @@ export default function CampaignCard({ c }) {
                 />
             </div>
             <div className="flex justify-between text-xs opacity-70">
-                <span>Raised: {c?.totalRaised ?? 0}</span>
-                <span>Target: {c?.target ?? 0}</span>
-                <span>Donors: {c?.donors ?? 0}</span>
+                <span>Raised: {raised} ETH</span>
+                <span>Target: {target} ETH</span>
+                <span>Donors: {c?.donorCount ?? 0}</span>
             </div>
             </div>
 

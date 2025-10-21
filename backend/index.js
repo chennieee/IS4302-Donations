@@ -9,7 +9,8 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increase limit to handle base64 images
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Simple logging
 app.use((req, res, next) => {
@@ -37,6 +38,7 @@ app.get('/', (req, res) => {
 
 // Campaign routes
 app.get('/api/campaigns', (req, res) => campaignController.getCampaigns(req, res));
+app.post('/api/campaigns', (req, res) => campaignController.createCampaign(req, res));
 app.get('/api/campaigns/:address', (req, res) => campaignController.getCampaign(req, res));
 app.get('/api/campaigns/:address/events', (req, res) => campaignController.getCampaignEvents(req, res));
 

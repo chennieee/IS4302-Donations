@@ -1,38 +1,67 @@
-import { Routes, Route, Link } from 'react-router-dom'
-import Home from './pages/Home'
+import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import Landing from './pages/Landing'
+import AllCampaigns from './pages/AllCampaigns'
 import Campaign from './pages/Campaign'
 import Donate from './pages/Donate'
-import NotificationsBell from './components/NotificationsBell'
-//import { useAccountWC } from './hooks/useAccount'
+import MyProfile from './pages/MyProfile'
+import MyCampaigns from './pages/MyCampaigns'
+import CreateCampaign from './pages/CreateCampaign'
+import SidebarLayout from './components/SidebarLayout'
 import { useEffect } from 'react'
 import { initWallet } from './lib/wallet'
 
 export default function App() {
-  // Address of the connected wallet
-  //const account = useAccountWC()
+  const location = useLocation()
+  const isLandingPage = location.pathname === '/'
 
   // Ensure Web3Modal is initialized once on app load
   useEffect(() => { initWallet() }, [])
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b">
-        <div className="container" style={{display:'flex',alignItems:'center',justifyContent:'space-between',height:64}}>
-          <span className="font-bold">Home</span>
-          <div style={{display:'flex',gap:12,alignItems:'center'}}>
-            <w3m-button />
+    <div className="app-container">
+      {/* Only show header on non-landing pages */}
+      {!isLandingPage && (
+        <header className="app-header">
+          <div className="header-content">
+            <Link to="/" className="app-logo">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              </svg>
+            </Link>
+            <div className="header-actions">
+              <w3m-button />
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <main>
-        <div className="container" style={{padding:'16px 0'}}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/campaign/:address" element={<Campaign />} />
-            <Route path="/campaign/:address/donate" element={<Donate />} />
-          </Routes>
-        </div>
+      <main className={isLandingPage ? 'main-landing' : 'main-content'}>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/campaigns" element={<AllCampaigns />} />
+          <Route path="/campaign/:address" element={<Campaign />} />
+          <Route path="/campaign/:address/donate" element={<Donate />} />
+          <Route path="/my-donations" element={
+            <SidebarLayout>
+              <div className="placeholder-page">My Donations - Coming Soon</div>
+            </SidebarLayout>
+          } />
+          <Route path="/my-campaigns" element={
+            <SidebarLayout>
+              <MyCampaigns />
+            </SidebarLayout>
+          } />
+          <Route path="/create-campaign" element={
+            <SidebarLayout>
+              <CreateCampaign />
+            </SidebarLayout>
+          } />
+          <Route path="/profile" element={
+            <SidebarLayout>
+              <MyProfile />
+            </SidebarLayout>
+          } />
+        </Routes>
       </main>
     </div>
   )

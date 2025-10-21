@@ -84,6 +84,8 @@ class CampaignController {
         address: campaign.addr,
         organizer: campaign.organizer,
         name: campaign.name,
+        description: campaign.description || '',
+        image: campaign.image || null,
         milestones: JSON.parse(campaign.milestones_json),
         deadline: campaign.deadline,
         createdBlock: campaign.created_block,
@@ -153,6 +155,8 @@ class CampaignController {
         organizer: campaign.organizer,
         verifiers: verifiers.map(v => v.verifier_addr),
         name: campaign.name,
+        description: campaign.description || '',
+        image: campaign.image || null,
         deadline: campaign.deadline,
         createdBlock: campaign.created_block,
         totalRaised: campaign.total_raised || '0',
@@ -285,6 +289,103 @@ class CampaignController {
 
   isValidAddress(address) {
     return /^0x[a-fA-F0-9]{40}$/.test(address);
+  }
+
+  // POST /campaigns - Create a new campaign
+  async createCampaign(req, res) {
+    try {
+      const { error, value } = this.validateCreateCampaign(req.body);
+      if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+      }
+
+      const { name, description, image, organizer, deadline, milestones } = value;
+
+      // Generate a mock campaign address (in production, this would come from blockchain)
+      const campaignAddress = '0x' + Math.random().toString(16).substring(2, 42).padEnd(40, '0');
+      const createdBlock = Math.floor(Date.now() / 1000);
+
+      // First, try to add description and image columns if they don't exist (migration)
+      try {
+        await this.db.run(`ALTER TABLE campaigns ADD COLUMN description TEXT`);
+      } catch (e) {
+        // Column already exists, ignore error
+      }
+      try {
+        await this.db.run(`ALTER TABLE campaigns ADD COLUMN image TEXT`);
+      } catch (e) {
+        // Column already exists, ignore error
+      }
+
+      // Insert campaign into database
+      await this.db.run(`
+        INSERT INTO campaigns (addr, organizer, name, description, image, milestones_json, deadline, created_block, created_at, chain_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        campaignAddress.toLowerCase(),
+        organizer.toLowerCase(),
+        name,
+        description || '',
+        image || null,
+        JSON.stringify(milestones),
+        deadline,
+        createdBlock,
+        new Date().toISOString(),
+        1337 // Default chain ID (local hardhat network)
+      ]);
+
+      // Insert milestones
+      for (let i = 0; i < milestones.length; i++) {
+        await this.db.run(`
+          INSERT INTO milestones (campaign_addr, idx, target_amount, status)
+          VALUES (?, ?, ?, ?)
+        `, [
+          campaignAddress.toLowerCase(),
+          i,
+          milestones[i].toString(),
+          'Pending'
+        ]);
+      }
+
+      // Initialize aggregates
+      await this.db.run(`
+        INSERT INTO aggregates (campaign_addr, total_raised, total_released, donor_count)
+        VALUES (?, ?, ?, ?)
+      `, [
+        campaignAddress.toLowerCase(),
+        '0',
+        '0',
+        0
+      ]);
+
+      res.status(201).json({
+        success: true,
+        campaign: {
+          address: campaignAddress,
+          organizer,
+          name,
+          milestones,
+          deadline,
+          createdBlock
+        }
+      });
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  validateCreateCampaign(data) {
+    const schema = Joi.object({
+      name: Joi.string().min(3).max(200).required(),
+      description: Joi.string().min(10).max(1000).optional().allow(''),
+      image: Joi.string().optional().allow(null, ''),
+      organizer: Joi.string().pattern(/^0x[a-fA-F0-9]{40}$/).required(),
+      deadline: Joi.number().integer().min(Math.floor(Date.now() / 1000)).required(),
+      milestones: Joi.array().items(Joi.number().positive()).min(1).max(10).required()
+    });
+
+    return schema.validate(data);
   }
 }
 

@@ -1,11 +1,10 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap');
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Instrument Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #0f172a;          
-  background: #ffffff;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -15,19 +14,27 @@
 
 html, body, #root {
   height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  background: #fff;
-  color: #0f172a;
+  background: #1e2940;
+  color: #ffffff;
 }
 
 a { color: inherit; text-decoration: none; }
-button { cursor: pointer; }
+button { cursor: pointer; border: none; background: none; }
 
 h1, h2, h3, h4 { margin: 0; }
+
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
 .container {
   max-width: 1100px;
@@ -82,9 +89,977 @@ button.base {
 }
 button.base:hover { background: #f1f5f9; }
 
-/* Optional: dark scheme if your OS is dark. You can delete this block. */
-@media (prefers-color-scheme: dark) {
-  :root { background: #0b1220; color: #e5e7eb; }
-  .border { border-color: #243041; }
-  .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,.35); }
+/* ========== LANDING PAGE ========== */
+.landing-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #fff;
+  color: #000;
+}
+
+.landing-content {
+  text-align: center;
+  max-width: 900px;
+  padding: 2rem;
+}
+
+.landing-title {
+  font-size: clamp(3rem, 10vw, 7rem);
+  font-weight: 900;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.landing-subtitle {
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  font-weight: 400;
+  margin-bottom: 3rem;
+  color: #000;
+  line-height: 1.4;
+}
+
+.landing-start-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #2d3f5f;
+  color: #fff;
+  padding: 1rem 3rem;
+  border-radius: 50px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.landing-start-button:hover {
+  background: #3d4f6f;
+}
+
+.landing-arrow-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* ========== HEADER ========== */
+.app-header {
+  background: #1e2940;
+  border-bottom: 1px solid #2d3f5f;
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-logo {
+  color: #fff;
+  display: flex;
+  align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.main-landing {
+  flex: 1;
+}
+
+.main-content {
+  flex: 1;
+  background: #fff;
+  color: #000;
+}
+
+/* ========== ALL CAMPAIGNS PAGE ========== */
+.campaigns-layout {
+  display: flex;
+  min-height: calc(100vh - 64px);
+}
+
+.campaigns-sidebar {
+  width: 180px;
+  background: #1e2940;
+  padding: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar-nav-item {
+  padding: 0.75rem 2rem;
+  color: #9ca3af;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.sidebar-nav-item.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-left-color: #5a6f8f;
+}
+
+.campaigns-main {
+  flex: 1;
+  padding: 3rem;
+  background: #fff;
+  color: #000;
+}
+
+.campaigns-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 2.5rem;
+  color: #000;
+}
+
+.campaigns-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+.campaign-card-skeleton {
+  height: 400px;
+  background: #e5e7eb;
+  border-radius: 16px;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.error-message {
+  background: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.empty-state {
+  text-align: center;
+  color: #6b7280;
+  font-size: 1.25rem;
+  padding: 4rem 0;
+}
+
+/* ========== CAMPAIGN DETAIL PAGE ========== */
+.campaign-detail-layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 3rem;
+  padding: 3rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: #fff;
+  min-height: calc(100vh - 64px);
+}
+
+.campaign-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.campaign-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.campaign-back-button:hover {
+  color: #1f2937;
+  background: #f3f4f6;
+}
+
+.campaign-back-button svg {
+  flex-shrink: 0;
+}
+
+.campaign-detail-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.campaign-image-placeholder {
+  width: 100%;
+  height: 400px;
+  background: #d1d5db;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: #000;
+  font-weight: 600;
+}
+
+.campaign-creator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #000;
+}
+
+.creator-avatar {
+  width: 40px;
+  height: 40px;
+  background: #e5e7eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.creator-name {
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.campaign-description {
+  color: #374151;
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+.campaign-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.campaign-btn {
+  padding: 0.875rem 2.5rem;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: 2px solid #000;
+}
+
+.campaign-btn-donate {
+  background: #fff;
+  color: #000;
+  border-color: #000;
+}
+
+.campaign-btn-donate:hover {
+  background: #000;
+  color: #fff;
+}
+
+.campaign-btn-share {
+  background: #fff;
+  color: #000;
+  border-color: #000;
+}
+
+.campaign-btn-share:hover {
+  background: #f3f4f6;
+}
+
+.campaign-right {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.campaign-stats-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.donation-progress {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.progress-ring {
+  transform: rotate(-90deg);
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.progress-percentage {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #000;
+}
+
+.donation-amount {
+  text-align: center;
+  width: 100%;
+}
+
+.amount-donated {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #000;
+  margin-bottom: 0.25rem;
+}
+
+.amount-goal {
+  font-size: 1rem;
+  color: #6b7280;
+}
+
+.donor-count {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.donor-icon {
+  color: #9ca3af;
+}
+
+.milestones-timeline {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.milestone-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  position: relative;
+  padding: 0.75rem 0;
+}
+
+.milestone-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  flex-shrink: 0;
+  margin-top: 0.25rem;
+  position: relative;
+  z-index: 2;
+}
+
+.milestone-dot.reached {
+  background: #2d3f5f;
+}
+
+.milestone-line {
+  position: absolute;
+  left: 15px;
+  top: 40px;
+  width: 2px;
+  height: calc(100% + 0.5rem);
+  background: #e5e7eb;
+  z-index: 1;
+}
+
+.milestone-line.reached {
+  background: #2d3f5f;
+}
+
+.milestone-label {
+  flex: 1;
+  padding-top: 0.25rem;
+}
+
+.milestone-name {
+  font-weight: 600;
+  color: #000;
+  font-size: 0.95rem;
+}
+
+.milestone-amount {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.recent-activity {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.activity-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #000;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.activity-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #4b5563;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.activity-info {
+  flex: 1;
+}
+
+.activity-donor {
+  font-weight: 500;
+  color: #000;
+  font-size: 0.95rem;
+}
+
+.activity-amount {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.campaign-error,
+.campaign-loading {
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.campaign-error {
+  color: #c33;
+}
+
+/* ========== PLACEHOLDER PAGES ========== */
+.placeholder-page {
+  padding: 4rem 2rem;
+  text-align: center;
+  font-size: 1.5rem;
+  color: #6b7280;
+  background: #fff;
+  min-height: calc(100vh - 64px);
+}
+
+/* ========== SIDEBAR LAYOUT (Collapsible) ========== */
+.sidebar-layout {
+  display: flex;
+  min-height: calc(100vh - 64px);
+}
+
+.sidebar {
+  width: 220px;
+  background: #1e2940;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+  width: 60px;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: 1rem;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  background: #2d3f5f;
+  border: 2px solid #1e2940;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.2s;
+}
+
+.sidebar-toggle:hover {
+  transform: scale(1.1);
+  background: #3d4f6f;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 3rem 0 2rem;
+}
+
+.sidebar .sidebar-nav-item {
+  padding: 0.75rem 2rem;
+  color: #9ca3af;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar.collapsed .sidebar-nav-item {
+  padding: 0.75rem 1rem;
+  font-size: 0;
+}
+
+.sidebar .sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.sidebar .sidebar-nav-item.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-left-color: #5a6f8f;
+}
+
+.sidebar-main-content {
+  flex: 1;
+  background: #fff;
+  color: #000;
+}
+
+.page-content {
+  padding: 3rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 2.5rem;
+  color: #000;
+}
+
+/* ========== MY PROFILE PAGE ========== */
+.profile-container {
+  padding: 3rem;
+  background: #fff;
+  min-height: calc(100vh - 64px);
+}
+
+.profile-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 3rem;
+  color: #000;
+}
+
+.profile-content {
+  display: flex;
+  gap: 3rem;
+  max-width: 1200px;
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 24px;
+  padding: 3rem;
+}
+
+.profile-picture-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  min-width: 250px;
+}
+
+.profile-avatar-large {
+  width: 160px;
+  height: 160px;
+  background: #6b7280;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  position: relative;
+}
+
+.profile-verified-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 48px;
+  height: 48px;
+  background: #3b82f6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border: 4px solid #fff;
+}
+
+.change-picture-btn {
+  padding: 0.75rem 2rem;
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #000;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.change-picture-btn:hover {
+  background: #000;
+  color: #fff;
+}
+
+.profile-form-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.profile-label {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #000;
+}
+
+.profile-input {
+  padding: 1rem 1.5rem;
+  background: #d1d5db;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #000;
+}
+
+.profile-input:focus {
+  outline: 2px solid #5a6f8f;
+  background: #e5e7eb;
+}
+
+.profile-input:disabled,
+.profile-input[readonly] {
+  background: #e5e7eb;
+  color: #4b5563;
+  cursor: default;
+}
+
+.save-details-btn {
+  padding: 1rem 3rem;
+  background: #000;
+  border: 2px solid #000;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+  margin-top: 1rem;
+}
+
+.save-details-btn:hover {
+  background: #fff;
+  color: #000;
+}
+
+/* ========== MY CAMPAIGNS PAGE ========== */
+.my-campaigns-container {
+  padding: 3rem;
+  background: #fff;
+  min-height: calc(100vh - 64px);
+}
+
+.my-campaigns-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: #000;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #6b7280;
+}
+
+.empty-state p {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state p:first-child {
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* ========== CREATE CAMPAIGN PAGE ========== */
+.create-campaign-container {
+  padding: 3rem;
+  background: #fff;
+  min-height: calc(100vh - 64px);
+}
+
+.create-campaign-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: #000;
+}
+
+.create-campaign-form {
+  max-width: 1200px;
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 24px;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+.form-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #000;
+  text-align: left;
+}
+
+.form-label-optional {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+.form-input {
+  padding: 1rem 1.5rem;
+  background: #d1d5db;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #000;
+  width: 100%;
+}
+
+.form-textarea {
+  min-height: 120px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.form-input:focus {
+  outline: 2px solid #5a6f8f;
+  background: #e5e7eb;
+}
+
+.form-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.image-upload-container {
+  position: relative;
+}
+
+.image-upload-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.image-upload-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  border: 2px dashed #9ca3af;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.image-upload-dropzone:hover {
+  border-color: #5a6f8f;
+  background: #f9fafb;
+}
+
+.upload-placeholder {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 1rem;
+}
+
+.upload-filename {
+  color: #000;
+  font-size: 1rem;
+}
+
+.upload-preview-img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+
+.form-actions {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.form-btn {
+  padding: 1rem 3.5rem;
+  border: 2px solid #000;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.form-btn-submit {
+  background: #fff;
+  color: #000;
+}
+
+.form-btn-submit:hover {
+  background: #000;
+  color: #fff;
+}
+
+.form-btn-clear {
+  background: #fff;
+  color: #000;
+}
+
+.form-btn-clear:hover {
+  background: #f3f4f6;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1024px) {
+  .campaign-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-content {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    padding: 0;
+    overflow-x: auto;
+  }
+
+  .sidebar.collapsed {
+    width: 100%;
+  }
+
+  .sidebar-toggle {
+    display: none;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    padding: 0;
+    width: 100%;
+  }
+
+  .sidebar .sidebar-nav-item {
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem !important;
+  }
+
+  .sidebar .sidebar-nav-item.active {
+    border-left: none;
+    border-bottom-color: #5a6f8f;
+  }
+
+  .page-content {
+    padding: 2rem 1rem;
+  }
+
+  .profile-container,
+  .create-campaign-container {
+    padding: 2rem 1rem;
+  }
 }
