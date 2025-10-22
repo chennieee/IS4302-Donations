@@ -1,7 +1,3 @@
-// Campaign page shows campaign details such as name and milestone progress
-// Campaign page contains a button for users to donate
-// When users click on the donate button, they are brought to the Donation page
-
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { api } from '../lib/api'
