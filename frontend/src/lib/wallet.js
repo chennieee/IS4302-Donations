@@ -3,7 +3,8 @@
 
 import { createWeb3Modal } from '@web3modal/wagmi/react'
 import { defaultWagmiConfig } from '@web3modal/wagmi'
-import { mainnet } from 'viem/chains'
+import { WagmiProvider } from 'wagmi'
+import { sepolia } from 'viem/chains'  //testnet (test ETH, no real money)
 
 const projectId = import.meta.env.VITE_WC_PROJECT_ID
 const appUrl = import.meta.env.VITE_APP_URL
@@ -12,22 +13,28 @@ import appIconUrl from '../assets/react.svg?url'
 let modal, wagmiConfig
 
 export function initWallet() {
-    if (modal) return { modal, wagmiConfig }
+    if (modal && wagmiConfig) return { modal, wagmiConfig }
 
-    const chains = [mainnet]
+    const chains = [sepolia]
 
     wagmiConfig = defaultWagmiConfig({
         projectId,
         chains,
         metadata: {
             name: 'Donations',
-            description: 'Wallet-only frontend; backend handles blockchain',
+            description: 'Non-custodial donations dApp',
             url: appUrl,
             icons: [appIconUrl]
         }
     })
 
-    modal = createWeb3Modal({ wagmiConfig, projectId, themeMode: 'light' })
+    modal = createWeb3Modal({
+        wagmiConfig, 
+        projectId, 
+        themeMode: 'light' 
+    })
 
     return { modal, wagmiConfig }
 }
+
+export { WagmiProvider }

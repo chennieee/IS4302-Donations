@@ -1,8 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const Database = require('./src/models/database');
+
 const CampaignController = require('./src/controllers/campaignController');
+const UserController = require('./src/controllers/userController');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,13 +19,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Initialize database and controller
+// Initialize database and controllers
 const campaignController = new CampaignController();
+const userController = new UserController();
 
 // Initialize DB tables on startup
 (async () => {
   await campaignController.initialize();
-  console.log('Database initialized');
+  await userController.initialize();
+  console.log('✓ database and controllers initialized');
 })();
 
 // Routes
@@ -41,6 +44,10 @@ app.get('/api/campaigns', (req, res) => campaignController.getCampaigns(req, res
 app.post('/api/campaigns', (req, res) => campaignController.createCampaign(req, res));
 app.get('/api/campaigns/:address', (req, res) => campaignController.getCampaign(req, res));
 app.get('/api/campaigns/:address/events', (req, res) => campaignController.getCampaignEvents(req, res));
+
+// User routes
+app.get('/api/users/:address', userController.getUser);
+app.put('/api/users/:address', userController.updateUser);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -63,6 +70,9 @@ app.listen(PORT, () => {
   console.log(`✓ API ready at http://localhost:${PORT}/api`);
   console.log(`\nAvailable endpoints:`);
   console.log(`  GET  /api/campaigns`);
+  console.log(`  POST /api/campaigns`);
   console.log(`  GET  /api/campaigns/:address`);
-  console.log(`  GET  /api/campaigns/:address/events\n`);
+  console.log(`  GET  /api/campaigns/:address/events`);
+  console.log(`  GET  /api/users/:address`);
+  console.log(`  PUT  /api/users/:address\n`)
 });

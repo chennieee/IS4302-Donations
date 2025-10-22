@@ -1,9 +1,9 @@
-// Hook to get the WalletConnect address from Wagmi (via Web3Modal)
+// Hook to expose the connected account address
 import { useEffect } from 'react'
-import { initWallet } from '../lib/wallet'
 import { useAccount } from 'wagmi'
+import { initWallet } from '../lib/wallet'
 
-export function useAccountWC() {
+export function useAccountWallet() {
     useEffect(() => { initWallet() }, [])
     const { address } = useAccount()
     return address || ''

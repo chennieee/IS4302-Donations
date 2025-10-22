@@ -47,17 +47,32 @@ class Database {
     `;
     await this.run(createEventLogTable);
 
+    // Users table
+    const createUsersTable = `
+      CREATE TABLE IF NOT EXISTS users (
+        wallet_addr TEXT PRIMARY KEY,
+        username TEXT,
+        avatar_url TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    await this.run(createUsersTable);
+
     // Campaigns table
     const createCampaignsTable = `
       CREATE TABLE IF NOT EXISTS campaigns (
         addr TEXT PRIMARY KEY,
-        organizer TEXT NOT NULL,
         name TEXT NOT NULL,
+        description TEXT,
+        image TEXT,
+        organizer TEXT NOT NULL,        
         deadline INTEGER NOT NULL,
         milestones_json TEXT NOT NULL,
-        created_block INTEGER NOT NULL,
         chain_id INTEGER NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_block INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (organizer) REFERENCES users(wallet_addr)
       )
     `;
     await this.run(createCampaignsTable);
@@ -102,7 +117,8 @@ class Database {
         finalized BOOLEAN DEFAULT FALSE,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (tx_hash, log_index),
-        FOREIGN KEY (campaign_addr) REFERENCES campaigns(addr)
+        FOREIGN KEY (campaign_addr) REFERENCES campaigns(addr),
+        FOREIGN KEY (donor) REFERENCES users(wallet_addr)
       )
     `;
     await this.run(createDonationsTable);

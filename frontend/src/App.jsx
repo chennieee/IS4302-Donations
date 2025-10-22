@@ -9,6 +9,7 @@ import CreateCampaign from './pages/CreateCampaign'
 import SidebarLayout from './components/SidebarLayout'
 import { useEffect } from 'react'
 import { initWallet } from './lib/wallet'
+import './index.css'
 
 export default function App() {
   const location = useLocation()

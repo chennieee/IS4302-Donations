@@ -1,43 +1,33 @@
-// REST api (TBC)
-const backendUrl = import.meta.env.VITE_BACKEND_URL
+const BASE = import.meta.env.VITE_BACKEND_URL
+const API_PREFIX = '/api'
 
-// GET request
-async function jget(base, path) {
-    const r = await fetch(`${base}${path}`)
-    if (!r.ok) throw new Error(`${path} failed`)
-    return r.json()
+// Build url structure (e.g. http://localhost:3001/api/campaigns)
+const isAbsolute = (p) => /^https?:\/\//i.test(p)
+const buildUrl = (path) => {
+  if (isAbsolute(path)) return path
+  const safePath = path.startsWith('/') ? path : `/${path}`
+  return `${BASE}${API_PREFIX}${safePath}`
 }
 
-// POST request
-async function jpost(base, path, body) {
-    const r = await fetch(`${base}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    })
-    if (!r.ok) {
-        const text = await r.text().catch(() => '')
-        throw new Error(`${path} failed: ${r.status} ${text}`)
-    }
-    return r.json()
+async function request(method, path, body) {
+  const response = await fetch(buildUrl(path), {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  })
+  if (!response.ok) throw new Error(`${buildUrl(path)} failed`)
+  return response.json()
 }
 
 export const api = {
-    // campaigns list + details (retrieved from backend)
-    listCampaigns: () => jget(backendUrl, '/campaigns'),
-    getCampaign: (addr) => jget(backendUrl, `/campaigns/${addr}`),
-    createCampaign: (data) => jpost(backendUrl, '/campaigns', data),
+    // campaigns
+    listCampaigns: () => request('GET', '/campaigns'),
+    getCampaign: (addr) => request('GET', `/campaigns/${addr}`),
+    createCampaign: (data) => request('POST', `/campaigns`, data),
 
-    // donation (contract calls performed by backend)
-    donate: ({ fromAddress, campaignAddress, amountEth }) =>
-        jpost(backendUrl, '/donations', { fromAddress, campaignAddress, amountEth }),
-
-    // notifications for a given wallet
-    notifications: (addr) => jget(backendUrl, `/notifications?address=${addr}`),
-
-    // verification
-    verification: (addr) => jget(backendUrl, `/verification/${addr}`)
-
+    // users
+    getUser: (walletAddr) => request('GET', `/users/${walletAddr}`),
+    updateUser: (walletAddr, body) => request('PUT', `/users/${walletAddr}`, body)
 }
 
 export default api

@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { useAccountWallet } from '../hooks/useAccount'
 
 export default function CreateCampaign() {
   const navigate = useNavigate()
@@ -46,10 +47,18 @@ export default function CreateCampaign() {
     return parseFloat(cleaned) || 0
   }
 
+  const walletAddress = useAccountWallet()
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
     setError('')
+
+    if (!walletAddress) {
+      setError('Please connect your wallet to create a campaign')
+      setIsSubmitting(false)
+      return
+    }
 
     try {
       // Parse overall goal
@@ -96,8 +105,8 @@ export default function CreateCampaign() {
       // Convert deadline to Unix timestamp
       const deadlineTimestamp = Math.floor(new Date(formData.dateline).getTime() / 1000)
 
-      // For now, use a mock organizer address (in production, get from connected wallet)
-      const organizerAddress = '0x1234567890123456789012345678901234567890'
+      // Organizer's connected wallet address
+      const organizerAddress = walletAddress.toLowerCase()
 
       const campaignData = {
         name: formData.campaignTitle,

@@ -1,6 +1,3 @@
-// Home page shows the list of campaigns
-// When users click on a campaign, they are brought to the corresponding Campaign page
-
 import { useEffect, useState, useMemo } from 'react'
 import { api } from '../lib/api'
 import CampaignCard from '../components/CampaignCard'
