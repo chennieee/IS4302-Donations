@@ -44,8 +44,13 @@ contract Campaign is ReentrancyGuard {
         }
     }
 
-    modifier withinDeadline() {
+    modifier campaignInProgress() {
         require(block.timestamp < deadline, "Campaign has ended!");
+        _;
+    }
+
+    modifier campaignEnded() {
+        require(block.timestamp >= deadline, "Campaign has ended!");
         _;
     }
 
@@ -83,7 +88,7 @@ contract Campaign is ReentrancyGuard {
     }
 
     // Only accept denominations of 1 eth for now
-    function donate() external payable nonReentrant withinDeadline {
+    function donate() external payable nonReentrant campaignInProgress {
         uint256 ethAmount = msg.value / 1 ether;
         require(ethAmount >= 1, "Donations have to be at least 1 eth!");
         contributions[msg.sender] += ethAmount;
@@ -93,7 +98,7 @@ contract Campaign is ReentrancyGuard {
 
     function addMilestone(
         uint256 newMilestone
-    ) public validNewMilestone(newMilestone) withinDeadline {
+    ) public validNewMilestone(newMilestone) campaignInProgress {
         milestones.push(newMilestone);
         emit MilestoneAdded(newMilestone, milestones.length - 1);
     }
@@ -119,9 +124,20 @@ contract Campaign is ReentrancyGuard {
         emit MilestoneRejected(rejectedMilestone);
     }
 
-    // TODO
-    function releaseFunds() external onlyVerifier {}
+    function releaseFunds() external onlyVerifier campaignEnded nonReentrant {
+        payable(owner).transfer(totalRaised);
+        emit FundsReleased(totalRaised, milestones.length);
+    }
 
-    // TODO
-    function returnFunds() external onlyVerifier {}
+    function returnFunds() external campaignInProgress nonReentrant {
+        uint256 donationAmount = contributions[msg.sender];
+        require(donationAmount > 0, "No contribution to return!");
+        payable(msg.sender).transfer(donationAmount);
+        totalRaised -= donationAmount;
+        emit FundsReturned(msg.sender, donationAmount);
+    }
+
+    function getContribution() external view returns (uint256) {
+        return contributions[msg.sender];
+    }
 }
