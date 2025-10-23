@@ -129,12 +129,19 @@ contract Campaign is ReentrancyGuard {
         emit FundsReleased(totalRaised, milestones.length);
     }
 
+    // Only allow fund return when first milestone has not been hit
     function returnFunds() external campaignInProgress nonReentrant {
+        require(
+            milestones.length == 1 && totalRaised < milestones[0],
+            "Funds can no longer be returned!"
+        );
         uint256 donationAmount = contributions[msg.sender];
         require(donationAmount > 0, "No contribution to return!");
         payable(msg.sender).transfer(donationAmount);
-        totalRaised -= donationAmount;
         emit FundsReturned(msg.sender, donationAmount);
+
+        totalRaised -= donationAmount;
+        contributions[msg.sender] = 0;
     }
 
     function getContribution() external view returns (uint256) {
