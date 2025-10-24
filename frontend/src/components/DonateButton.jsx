@@ -1,55 +1,82 @@
-import { parseEther } from 'viem'
-import { sepolia } from 'viem/chains'
 import { useAccount, useChainId, useSwitchChain, useWriteContract } from 'wagmi'
-import { useWeb3Modal } from '@web3modal/wagmi/react'
+import { sepolia } from 'wagmi/chains'
+import { parseEther } from 'viem'
 import CampaignABI from '../abi/Campaign.json'
 
-export default function DonateButton({ campaignAddr, amountEth, className = '', onError, onSuccess }) {
-    const { isConnected } = useAccount()
-    const chainId = useChainId()
-    const { switchChainAsync } = useSwitchChain()
-    const { writeContract, isPending } = useWriteContract()
-    const { open } = useWeb3Modal()
+export default function DonateButton({
+  campaignAddr,
+  amountEth,
+  className = '',
+  onSuccess,
+  onError
+}) {
+  const { isConnected } = useAccount()
+  const chainId = useChainId()
+  const { switchChainAsync } = useSwitchChain()
+  const { writeContract, isPending } = useWriteContract()
 
-    const isValidAddr = /^0x[a-fA-F0-9]{40}$/.test(campaignAddr || '')
-    const trimmed = (amountEth || '').trim()
-    const isValidAmount = /^(\d+(\.\d+)?)$/.test(trimmed) && Number(trimmed) > 0
+  async function donate() {
+    try {
+      // 1. If web3modal not initialised properly, return console error
+      if (!window.web3modal) {
+        console.error('Web3Modal not initialized')
+        return
+      }
 
-    async function donate() {
-        try {
-            if (!isConnected) {
-                await open()
-                return
-            }
-            if (!isValidAddr) throw new Error('Invalid campaign address')
-            if (!isValidAmount) throw new Error('Enter a valid amount in ETH')
+      // 2. If wallet not connected yet, open modal
+      if (!isConnected) {
+        await window.web3modal.open()
+        return
+      }
 
-            if (chainId !== sepolia.id) {
-                await switchChainAsync({ chainId: sepolia.id })
-            }
+      // 3. Make sure we're on Sepolia (11155111)
+      if (chainId !== sepolia.id) {
+        await switchChainAsync({ chainId: sepolia.id })
+      }
 
-            const tx = await writeContract({
-                address: campaignAddr,
-                abi: CampaignABI,
-                functionName: 'donate',
-                value: parseEther(trimmed)
-            })
+      // 4. Validate amount
+      if (!amountEth || isNaN(amountEth) || Number(amountEth) <= 0) {
+        alert('Please enter a valid donation amount')
+        return
+      }
 
-            onSuccess && onSuccess(tx)
-        } catch (e) {
-            onError && onError(e?.shortMessage || e?.message || 'Donation failed')
+      // 5. Validate campaign address
+      if (!/^0x[a-fA-F0-9]{40}$/.test(campaignAddr)) {
+        alert('Invalid campaign address')
+        return
+      }
+
+      // 6. Send tx: call donate() payable on the Campaign contract
+      await writeContract(
+        {
+          abi: CampaignABI,
+          address: campaignAddr,
+          functionName: 'donate',
+          value: parseEther(amountEth)
         }
-    }
+      )
 
-    return (
-        <button
-        type="button"
-        className={className || 'btn'}
-        onClick={donate}
-        disabled={isPending || !isValidAmount || !isValidAddr}
-        title={!isValidAmount ? 'Enter a donation amount' : undefined}
-        >
-        {isPending ? 'Confirm in wallet…' : (trimmed ? `Donate ${trimmed} ETH` : 'Donate')}
-        </button>
-    )
+      if (onSuccess) {
+        onSuccess()
+      }
+    } catch (err) {
+      console.error('Donation failed:', err)
+      if (onError) {
+        onError(err)
+      } else {
+        alert('Transaction failed or was rejected.')
+      }
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className={className || 'btn btn-primary'}
+      onClick={donate}
+      disabled={isPending}
+    >
+      {isPending ? 'Donating…' : 'Donate'}
+    </button>
+  )
 }
