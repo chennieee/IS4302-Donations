@@ -155,7 +155,7 @@ contract Campaign is ReentrancyGuard {
     }
 
     function getContribution(address user) external view returns (uint256) {
-        require(contributions[user] >= 0, "The user did not contribute to the donation!");
+        require(contributions[user] > 0, "The user did not contribute to the donation!");
         return contributions[user];
     }
 
