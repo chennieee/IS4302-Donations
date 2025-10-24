@@ -98,9 +98,9 @@ export default function Campaign() {
           <Link to={`/campaign/${address}/donate`} className="campaign-btn campaign-btn-donate">
             Donate
           </Link>
-          <button className="campaign-btn campaign-btn-share">
+          {/*<button className="campaign-btn campaign-btn-share">
             Share
-          </button>
+          </button>*/}
         </div>
       </div>
 

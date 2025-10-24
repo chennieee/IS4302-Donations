@@ -7,16 +7,12 @@ import MyProfile from './pages/MyProfile'
 import MyCampaigns from './pages/MyCampaigns'
 import CreateCampaign from './pages/CreateCampaign'
 import SidebarLayout from './components/SidebarLayout'
-import { useEffect } from 'react'
-import { initWallet } from './lib/wallet'
+import ConnectWalletButton from './components/ConnectWalletButton'
 import './index.css'
 
 export default function App() {
   const location = useLocation()
   const isLandingPage = location.pathname === '/'
-
-  // Ensure Web3Modal is initialized once on app load
-  useEffect(() => { initWallet() }, [])
 
   return (
     <div className="app-container">
@@ -30,7 +26,7 @@ export default function App() {
               </svg>
             </Link>
             <div className="header-actions">
-              <w3m-button />
+              <ConnectWalletButton className="btn btn-primary" />
             </div>
           </div>
         </header>
