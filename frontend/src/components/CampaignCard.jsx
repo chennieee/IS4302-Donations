@@ -41,8 +41,8 @@ export default function CampaignCard({ c }) {
             <div className="text-sm">
             <div className="w-full h-2 bg-gray-200 rounded mb-1 overflow-hidden">
                 <div
-                className="h-full"
-                style={{ width: `${pct}%`, background: "linear-gradient(90deg,#9be,#6ad)" }}
+                    className="h-full bg-green-500"
+                    style={{ width: `${pct}%` }}
                 />
             </div>
             <div className="flex justify-between text-xs opacity-70">
