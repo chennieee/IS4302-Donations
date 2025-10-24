@@ -10,6 +10,7 @@ contract Campaign is ReentrancyGuard {
     string public name;
     uint256[] public milestones;
     mapping(address => uint256) private contributions;
+    address[] private contributors;
     uint256 public totalRaised = 0;
     uint256 public currentProposal = 0;
 
@@ -92,6 +93,9 @@ contract Campaign is ReentrancyGuard {
     function donate() external payable nonReentrant campaignInProgress {
         uint256 ethAmount = msg.value / 1 ether;
         require(ethAmount >= 1, "Donations have to be at least 1 eth!");
+        if (contributions[msg.sender] == 0) {
+            contributors.push(msg.sender);
+        }
         contributions[msg.sender] += ethAmount;
         totalRaised += ethAmount;
         emit DonationReceived(msg.sender, ethAmount);
@@ -150,8 +154,13 @@ contract Campaign is ReentrancyGuard {
         contributions[msg.sender] = 0;
     }
 
-    function getContribution() external view returns (uint256) {
-        return contributions[msg.sender];
+    function getContribution(address user) external view returns (uint256) {
+        require(contributions[user] >= 0, "The user did not contribute to the donation!");
+        return contributions[user];
+    }
+
+    function getContributors() external view returns (address[] memory) {
+        return contributors;
     }
 
     function isVerifier(address newVerifier) public view returns (bool){
@@ -166,6 +175,21 @@ contract Campaign is ReentrancyGuard {
     function removeVerifier(address newVerifier) onlyOwner public {
         require(isVerifier(newVerifier), "Address is already not a verifier");
         verifiers[newVerifier] = false;
+    }
+
+    // Refund all contributors after campaign ends (owner-triggered)
+    function refundAll() external onlyOwner campaignEnded nonReentrant {
+        uint256 len = contributors.length;
+        for (uint256 i = 0; i < len; i++) {
+            address donor = contributors[i];
+            uint256 amount = contributions[donor];
+            if (amount > 0) {
+                payable(donor).transfer(amount);
+                emit FundsReturned(donor, amount);
+                totalRaised -= amount;
+                contributions[donor] = 0;
+            }
+        }
     }
 
 }

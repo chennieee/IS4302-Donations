@@ -96,7 +96,7 @@ describe("CampaignFactory", function () {
 
     // Refund is allowed before first milestone is hit and only one milestone exists
     const prevTotal = await campaign0.totalRaised();
-    const userBefore = await campaign0.connect(user).getContribution();
+    const userBefore = await campaign0.connect(user).getContribution(user.address);
     expect(userBefore).to.be.greaterThan(0n, "user should have a contribution before refund");
 
     // Non-contributor cannot refund
@@ -106,7 +106,7 @@ describe("CampaignFactory", function () {
     await rtx.wait();
 
     // After refund, user's contribution is zero and totalRaised reduced by that amount (in contract units)
-    const userAfter = await campaign0.connect(user).getContribution();
+    const userAfter = await campaign0.connect(user).getContribution(user.address);
     expect(userAfter).to.equal(0n, "user contribution should be cleared after refund");
     const newTotal = await campaign0.totalRaised();
     expect(newTotal).to.equal(prevTotal - userBefore, "totalRaised should drop by refunded amount");
@@ -190,6 +190,60 @@ describe("CampaignFactory", function () {
     const second = await campaign0.milestones(1);
     expect(second).to.equal(12n, "reject should not change existing milestones");
     await expect(campaign0.milestones(2)).to.be.reverted;
+  });
+
+  it("11. refundAll onlyOwner after deadline refunds all and zeroes state", async () => {
+    // Create a fresh campaign for refundAll testing
+    const name = "RefundAll";
+    const createTx = await factory.connect(owner).create(name, [verifier], 1, [100]);
+    await createTx.wait();
+    const count = await factory.campaignsCount();
+    const lastIdx = count - 1n;
+    const addr = await factory.getCampaign(lastIdx);
+    const cmp = await ethers.getContractAt("Campaign", addr);
+
+    // Two contributors donate 1 ETH each
+    const ONE_ETH = ethers.parseEther("1");
+    await (await cmp.connect(user).donate({ value: ONE_ETH })).wait();
+    await (await cmp.connect(other).donate({ value: ONE_ETH })).wait();
+
+    // Contributors list should contain both donors
+    const list = await cmp.getContributors();
+    expect(list).to.include.members([user.address, other.address]);
+
+    // Before deadline, refundAll should revert
+    await expect(cmp.connect(owner).refundAll()).to.be.reverted;
+
+    // Fast-forward time beyond the 1-day deadline
+    await ethers.provider.send("evm_increaseTime", [24 * 3600 + 1]);
+    await ethers.provider.send("evm_mine", []);
+
+    // Only owner can call refundAll
+    await expect(cmp.connect(user).refundAll()).to.be.reverted;
+
+    const totalBefore = await cmp.totalRaised();
+    const uBefore = await cmp.connect(user).getContribution(user.address);
+    const oBefore = await cmp.connect(other).getContribution(other.address);
+    expect(uBefore).to.equal(1n);
+    expect(oBefore).to.equal(1n);
+
+    // Perform bulk refund
+    const rtx = await cmp.connect(owner).refundAll();
+    await rtx.wait();
+
+    // Contributions cleared and totalRaised reduced accordingly (contract units)
+    const uAfter = await cmp.connect(user).getContribution(user.address);
+    const oAfter = await cmp.connect(other).getContribution(other.address);
+    const totalAfter = await cmp.totalRaised();
+    expect(uAfter).to.equal(0n, "user contribution should be zero after refundAll");
+    expect(oAfter).to.equal(0n, "other contribution should be zero after refundAll");
+    expect(totalAfter).to.equal(totalBefore - uBefore - oBefore, "totalRaised should decrease by sum of contributions");
+
+    // Idempotent if called again (no further changes)
+    const totalAgainBefore = await cmp.totalRaised();
+    await (await cmp.connect(owner).refundAll()).wait();
+    const totalAgainAfter = await cmp.totalRaised();
+    expect(totalAgainAfter).to.equal(totalAgainBefore);
   });
 
 });
