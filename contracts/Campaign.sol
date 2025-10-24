@@ -37,6 +37,7 @@ contract Campaign is ReentrancyGuard {
         for (uint i = 0; i < len; i++) {
             verifiers[_verifiers[i]] = true;
         }
+        verifiers[owner] = true;
 
         len = _milestones.length;
         for (uint256 i = 0; i < len; i++) {
@@ -76,7 +77,7 @@ contract Campaign is ReentrancyGuard {
         require(
             len == 0 ||
                 (milestone > milestones[len - 1] &&
-                    milestones[len - 1] <= totalRaised),
+                    milestones[len - 1] >= totalRaised),
             "New milestone should be greater than current milestone!"
         );
         _;
@@ -98,7 +99,7 @@ contract Campaign is ReentrancyGuard {
 
     function addMilestone(
         uint256 newMilestone
-    ) public validNewMilestone(newMilestone) campaignInProgress {
+    ) internal validNewMilestone(newMilestone) campaignInProgress {
         milestones.push(newMilestone);
         emit MilestoneAdded(newMilestone, milestones.length - 1);
     }
@@ -109,6 +110,11 @@ contract Campaign is ReentrancyGuard {
         require(currentProposal == 0, "Wait for current proposal to complete!");
         currentProposal = newMilestone;
         emit MilestoneProposed(newMilestone);
+    }
+
+    function getCurrentProposal() public view returns(uint256) {
+        require(currentProposal != 0, "There is no ongoing proposals");
+        return currentProposal;
     }
 
     function acceptProposal() external onlyVerifier hasProposal nonReentrant {
@@ -130,7 +136,7 @@ contract Campaign is ReentrancyGuard {
     }
 
     // Only allow fund return when first milestone has not been hit
-    function returnFunds() external campaignInProgress nonReentrant {
+    function refund() external campaignInProgress nonReentrant {
         require(
             milestones.length == 1 && totalRaised < milestones[0],
             "Funds can no longer be returned!"
@@ -147,4 +153,19 @@ contract Campaign is ReentrancyGuard {
     function getContribution() external view returns (uint256) {
         return contributions[msg.sender];
     }
+
+    function isVerifier(address newVerifier) public view returns (bool){
+        return verifiers[newVerifier];
+    }
+
+    function addVerifier(address newVerifier) onlyOwner public {
+        require(!isVerifier(newVerifier), "Address is already a verifier");
+        verifiers[newVerifier] = true;
+    }
+
+    function removeVerifier(address newVerifier) onlyOwner public {
+        require(isVerifier(newVerifier), "Address is already not a verifier");
+        verifiers[newVerifier] = false;
+    }
+
 }

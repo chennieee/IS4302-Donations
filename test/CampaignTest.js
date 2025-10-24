@@ -4,12 +4,12 @@ const { ethers } = require("hardhat");
 
 describe("CampaignFactory", function () {
   let CampaignFactory;
-  let factory, owner, user, verifier;
-  let campaign0, campaign1, campaign2, campaign3, campaign4, campaign5;
+  let factory, owner, user, verifier, other;
+  let campaign0, campaign1, campaign2;
 
 
   before(async () => {
-    [owner, user, verifier] = await ethers.getSigners();
+    [owner, user, verifier, other] = await ethers.getSigners();
     CampaignFactory = await ethers.getContractFactory("CampaignFactory");
     factory = await CampaignFactory.deploy();
     await factory.waitForDeployment();
@@ -34,7 +34,94 @@ describe("CampaignFactory", function () {
     await tx.wait();
     expect(await campaign0.totalRaised()).to.equal(1, "new totalRaised amount is incorrect");
   });
+  it("3. tracks campaigns in factory getters (count and list length)", async () => {
+    // Initially 1 campaign
+    const count0 = await factory.campaignsCount();
+    const list0 = await factory.getAllCampaigns();
+    expect(count0).to.equal(1n, "initial campaignsCount should be 1");
+    expect(list0.length).to.equal(1, "initial getAllCampaigns length should be 1");
 
+    // Create two more campaigns
+    const t1 = await factory.create("Second", [verifier], 123, [5, 15]);
+    await t1.wait();
+    const t2 = await factory.create("Third", [verifier], 999, [20]);
+    await t2.wait();
 
+    const count = await factory.campaignsCount();
+    const list = await factory.getAllCampaigns();
+    expect(count).to.equal(3n, "campaignsCount should reflect new deployments");
+    expect(list.length).to.equal(3, "getAllCampaigns length should reflect new deployments");
+  });
+
+  it("4. getCampaign reverts on invalid index", async () => {
+    await expect(factory.getCampaign(99)).to.be.reverted;
+  });
+
+  it("5. initial verifier set, add/remove verifier, and revert on duplicates", async () => {
+    // initial
+    expect(await campaign0.isVerifier(verifier.address)).to.equal(true, "initial verifier should be set");
+
+    // add a new verifier (by owner)
+    const addTx = await campaign0.connect(owner).addVerifier(user.address);
+    await addTx.wait();
+    expect(await campaign0.isVerifier(user.address)).to.equal(true, "newly added verifier should be true");
+
+    // adding same verifier again should revert
+    await expect(campaign0.connect(owner).addVerifier(user.address)).to.be.revertedWith("Address is already a verifier");
+
+    // remove verifier (by owner)
+    const rmTx = await campaign0.connect(owner).removeVerifier(user.address);
+    await rmTx.wait();
+    expect(await campaign0.isVerifier(user.address)).to.equal(false, "removed verifier should be false");
+
+    // removing again should revert
+    await expect(campaign0.connect(owner).removeVerifier(user.address)).to.be.revertedWith("Address is already not a verifier");
+  });
+
+  it("6. only owner can add/remove verifiers", async () => {
+    await expect(campaign0.connect(user).addVerifier(other.address)).to.be.reverted;
+    await expect(campaign0.connect(user).removeVerifier(verifier.address)).to.be.reverted;
+  });
+
+  it("7. donation requires non-zero value; balance increases on donate", async () => {
+    await expect(campaign0.connect(user).donate({ value: 0 })).to.be.reverted;
+
+    const beforeBal = await ethers.provider.getBalance(await campaign0.getAddress());
+    const oneEth = ethers.parseEther("1");
+    const tx = await campaign0.connect(user).donate({ value: oneEth });
+    await tx.wait();
+
+    const afterBal = await ethers.provider.getBalance(await campaign0.getAddress());
+    expect(afterBal - beforeBal).to.equal(oneEth, "contract balance should increase by donated amount");
+  });
+
+  it("8. milestones and basic fields are correctly stored per campaign", async () => {
+    // Use the second campaign created in test 3
+    const addr1 = await factory.getCampaign(1);
+    campaign1 = await ethers.getContractAt("Campaign", addr1);
+    expect(await campaign1.name()).to.equal("Second");
+    // public array getter
+    const m0 = await campaign1.milestones(0);
+    const m1 = await campaign1.milestones(1);
+    expect(m0).to.equal(5n);
+    expect(m1).to.equal(15n);
+
+    const addr2 = await factory.getCampaign(2);
+    campaign2 = await ethers.getContractAt("Campaign", addr2);
+    expect(await campaign2.name()).to.equal("Third");
+    const m2 = await campaign2.milestones(0);
+    expect(m2).to.equal(20n);
+  });
+
+  it("9. owners are set correctly per deployee", async () => {
+    expect(await campaign0.owner()).to.equal(await owner.getAddress());
+    const c1 = await factory.getCampaign(1);
+    const c2 = await factory.getCampaign(2);
+    const cmp1 = await ethers.getContractAt("Campaign", c1);
+    const cmp2 = await ethers.getContractAt("Campaign", c2);
+    // factory.create is called by the same owner here, so owner should be the deployer
+    expect(await cmp1.owner()).to.equal(await owner.getAddress());
+    expect(await cmp2.owner()).to.equal(await owner.getAddress());
+  });
 
 });
