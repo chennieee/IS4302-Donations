@@ -85,6 +85,10 @@ describe("CampaignFactory", function () {
 
   it("7. donation requires non-zero value; balance increases on donate", async () => {
     await expect(campaign0.connect(user).donate({ value: 0 })).to.be.reverted;
+    // Reject fractional ETH donations
+    const onePointFive = ethers.parseEther("1.5");
+    await expect(campaign0.connect(user).donate({ value: onePointFive }))
+      .to.be.revertedWith("Donations must be whole ETH multiples");
 
     const beforeBal = await ethers.provider.getBalance(await campaign0.getAddress());
     const oneEth = ethers.parseEther("1");

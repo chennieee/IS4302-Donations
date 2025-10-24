@@ -91,8 +91,9 @@ contract Campaign is ReentrancyGuard {
 
     // Only accept denominations of 1 eth for now
     function donate() external payable nonReentrant campaignInProgress {
+        require(msg.value >= 1 ether, "Donations have to be at least 1 eth!");
+        require(msg.value % 1 ether == 0, "Donations must be whole ETH multiples");
         uint256 ethAmount = msg.value / 1 ether;
-        require(ethAmount >= 1, "Donations have to be at least 1 eth!");
         if (contributions[msg.sender] == 0) {
             contributors.push(msg.sender);
         }
@@ -135,7 +136,7 @@ contract Campaign is ReentrancyGuard {
     }
 
     function releaseFunds() external onlyVerifier campaignEnded nonReentrant {
-        payable(owner).transfer(totalRaised);
+        payable(owner).transfer(totalRaised * 1 ether);
         emit FundsReleased(totalRaised, milestones.length);
     }
 
@@ -147,7 +148,7 @@ contract Campaign is ReentrancyGuard {
         );
         uint256 donationAmount = contributions[msg.sender];
         require(donationAmount > 0, "No contribution to return!");
-        payable(msg.sender).transfer(donationAmount);
+        payable(msg.sender).transfer(donationAmount * 1 ether);
         emit FundsReturned(msg.sender, donationAmount);
 
         totalRaised -= donationAmount;
@@ -155,7 +156,6 @@ contract Campaign is ReentrancyGuard {
     }
 
     function getContribution(address user) external view returns (uint256) {
-        require(contributions[user] > 0, "The user did not contribute to the donation!");
         return contributions[user];
     }
 
@@ -184,7 +184,7 @@ contract Campaign is ReentrancyGuard {
             address donor = contributors[i];
             uint256 amount = contributions[donor];
             if (amount > 0) {
-                payable(donor).transfer(amount);
+                payable(donor).transfer(amount * 1 ether);
                 emit FundsReturned(donor, amount);
                 totalRaised -= amount;
                 contributions[donor] = 0;
