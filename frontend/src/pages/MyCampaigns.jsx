@@ -2,10 +2,12 @@
 // Displays all campaigns organized by the logged-in user
 
 import { useState, useEffect } from 'react'
+import CreateCampaign from './CreateCampaign'
 
 export default function MyCampaigns() {
   const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
 
   useEffect(() => {
     // TODO: Fetch campaigns created by the current user
@@ -24,7 +26,45 @@ export default function MyCampaigns() {
 
   return (
     <div className="my-campaigns-container">
-      <h1 className="my-campaigns-title">My Campaigns</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <h1 className="my-campaigns-title" style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', margin: 0, lineHeight: '1' }}>My Campaigns</h1>
+        <button
+          aria-label="Create a new campaign"
+          onClick={() => setShowCreate(s => !s)}
+          style={{
+            width: '40px',
+            height: '40px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '8px',
+            background: '#0f172a',
+            color: '#fff',
+            fontSize: '28px',
+            fontWeight: 700,
+            border: 'none',
+            cursor: 'pointer',
+            transform: 'translateY(-4px)'
+          }}
+        >
+          +
+        </button>
+      </div>
+
+      {showCreate && (
+        <div style={{ marginTop: '1rem' }}>
+          <CreateCampaign
+            /* show embedded form title so it looks like the CreateCampaign page */
+            showTitle={true}
+            onDone={() => {
+              // Close the embedded create form and trigger a simple state update.
+              // TODO: replace with a real refresh of campaigns from backend/wallet.
+              setShowCreate(false)
+              setCampaigns(prev => prev)
+            }}
+          />
+        </div>
+      )}
 
       {campaigns.length === 0 ? (
         <div className="empty-state">

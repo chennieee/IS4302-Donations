@@ -5,8 +5,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
 import { useAccountWallet } from '../hooks/useAccount'
+import './CreateCampaign.css'
 
-export default function CreateCampaign() {
+export default function CreateCampaign({ onDone, showTitle = true }) {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     campaignTitle: '',
@@ -126,8 +127,13 @@ export default function CreateCampaign() {
       // Show success message
       alert(`Campaign "${formData.campaignTitle}" created successfully!`)
 
-      // Navigate to campaigns page
-      navigate('/campaigns')
+      // If embedded, call the provided callback instead of navigation
+      if (onDone) {
+        onDone(response)
+      } else {
+        // Navigate to campaigns page
+        navigate('/campaigns')
+      }
     } catch (err) {
       console.error('Error creating campaign:', err)
       setError(err.message || 'Failed to create campaign. Please try again.')
@@ -156,7 +162,7 @@ export default function CreateCampaign() {
 
   return (
     <div className="create-campaign-container">
-      <h1 className="create-campaign-title">Create a Campaign</h1>
+      {showTitle && <h1 className="create-campaign-title">Create a Campaign</h1>}
 
       {error && (
         <div className="error-message" style={{ marginBottom: '1rem' }}>
