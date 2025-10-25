@@ -1,5 +1,10 @@
 import { useAccount, useChainId, useSwitchChain } from 'wagmi'
-import { sepolia } from 'viem/chains'
+
+// Local hardhat chain
+const localhostChain = {
+    id: 31337,
+    name: 'Hardhat Local'
+}
 
 export default function ConnectWalletButton({ className = '' }) {
     const { address, isConnected } = useAccount()
@@ -7,21 +12,21 @@ export default function ConnectWalletButton({ className = '' }) {
     const { switchChainAsync } = useSwitchChain()
 
     async function onClick() {
-        // Debugging: Check if web3modal was initialised properly
+        // Check if wallet modal exists
         if (!window.web3modal) {
             console.error('Web3Modal not initialised')
             return
         }
 
-        // If not connected yet, open wallet modal
+        // If not connected, open wallet modal
         if (!isConnected) {
             await window.web3modal.open()
             return
         }
 
-        // If connected but wrong network, switch to Sepolia
-        if (chainId !== sepolia.id) {
-            await switchChainAsync({ chainId: sepolia.id })
+        // If connected but wrong network, switch to localhost hardhat chain
+        if (chainId !== localhostChain.id) {
+            await switchChainAsync({ chainId: localhostChain.id })
         }
     }
 
