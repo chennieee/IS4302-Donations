@@ -232,7 +232,7 @@ export default function CreateCampaign({ onDone, showTitle = true }) {
 
         {/* Dateline */}
         <div className="form-row">
-          <label className="form-label">Dateline:</label>
+          <label className="form-label">Deadline:</label>
           <input
             type="date"
             className="form-input"
