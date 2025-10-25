@@ -243,7 +243,6 @@ describe("CampaignFactory", function () {
     expect(oAfter).to.equal(0n, "other contribution should be zero after refundAll");
     expect(totalAfter).to.equal(totalBefore - uBefore - oBefore, "totalRaised should decrease by sum of contributions");
 
-    // Idempotent if called again (no further changes)
     const totalAgainBefore = await cmp.totalRaised();
     await expect(cmp.connect(owner).refundAll()).to.be.revertedWith("Funds are already released");;
     const totalAgainAfter = await cmp.totalRaised();
