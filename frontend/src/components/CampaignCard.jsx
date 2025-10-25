@@ -25,13 +25,13 @@ export default function CampaignCard({ c }) {
                        : "bg-yellow-500"
 
     return (
-        <div className="rounded-2xl border shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-gray-300 shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
         {c?.image && <img src={c.image} alt="" className="h-40 w-full object-cover" />}
 
         <div className="p-4 space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="items-center justify-between">
             <h2 className="font-semibold text-lg">{c?.name ?? 'Campaign'}</h2>
-            <span className={`text-xs text-white px-2 py-0.5 rounded ${statusColour}`}>
+            <span className={`inline-block text-xs text-white px-2 py-1 rounded ${statusColour}`}>
                 {status}
             </span>
             </div>
@@ -53,8 +53,8 @@ export default function CampaignCard({ c }) {
             </div>
 
             <div className="pt-1 flex gap-2">
-            <Link to={`/campaign/${c.address}`} className="px-3 py-1 rounded-xl border hover:shadow-sm">View</Link>
-            <Link to={`/campaign/${c.address}/donate`} className="px-3 py-1 rounded-xl border hover:shadow-sm">Donate</Link>
+            <Link to={`/campaign/${c.address}`} className="flex-1 text-center bg-gray-200 text-gray-900 font-medium py-2 rounded-xl transition-colors shadow-sm hover:bg-gray-300">View</Link>
+            <Link to={`/campaign/${c.address}/donate`} className="flex-1 text-center bg-gray-200 text-gray-900 font-medium py-2 rounded-xl transition-colors shadow-sm hover:bg-gray-300">Donate</Link>
             </div>
         </div>
         </div>
