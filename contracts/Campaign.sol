@@ -6,9 +6,11 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract Campaign is ReentrancyGuard {
     address public owner;
     mapping(address => bool) public verifiers;
+
     uint256 public deadline;
     string public name;
     uint256[] public milestones;
+
     mapping(address => uint256) private contributions;
     address[] private contributors;
     uint256 public totalRaised = 0;
@@ -118,7 +120,7 @@ contract Campaign is ReentrancyGuard {
     }
 
     function getCurrentProposal() public view returns(uint256) {
-        require(currentProposal != 0, "There is no ongoing proposals");
+        require(currentProposal != 0, "There is no ongoing proposal");
         return currentProposal;
     }
 
@@ -136,6 +138,7 @@ contract Campaign is ReentrancyGuard {
     }
 
     function releaseFunds() external onlyVerifier campaignEnded nonReentrant {
+        require(totalRaised > 0,"Funds are already released");
         payable(owner).transfer(totalRaised * 1 ether);
         emit FundsReleased(totalRaised, milestones.length);
     }
@@ -179,6 +182,7 @@ contract Campaign is ReentrancyGuard {
 
     // Refund all contributors after campaign ends (owner-triggered)
     function refundAll() external onlyOwner campaignEnded nonReentrant {
+        require(totalRaised > 0,"Funds are already released");
         uint256 len = contributors.length;
         for (uint256 i = 0; i < len; i++) {
             address donor = contributors[i];

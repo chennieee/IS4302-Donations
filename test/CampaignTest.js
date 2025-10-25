@@ -172,7 +172,7 @@ describe("CampaignFactory", function () {
     expect(appended).to.equal(12n, "accepted milestone should be appended as next milestone");
 
     // No active proposal now
-    await expect(campaign0.getCurrentProposal()).to.be.revertedWith("There is no ongoing proposals");
+    await expect(campaign0.getCurrentProposal()).to.be.revertedWith("There is no ongoing proposal");
 
     // After there are multiple milestones, refunds should no longer be allowed
     const oneEth = ethers.parseEther("1");
@@ -190,7 +190,7 @@ describe("CampaignFactory", function () {
     // Verifier rejects; it should not append another milestone
     const rej = await campaign0.connect(verifier).rejectProposal();
     await rej.wait();
-    await expect(campaign0.getCurrentProposal()).to.be.revertedWith("There is no ongoing proposals");
+    await expect(campaign0.getCurrentProposal()).to.be.revertedWith("There is no ongoing proposal");
     const second = await campaign0.milestones(1);
     expect(second).to.equal(12n, "reject should not change existing milestones");
     await expect(campaign0.milestones(2)).to.be.reverted;
@@ -245,7 +245,7 @@ describe("CampaignFactory", function () {
 
     // Idempotent if called again (no further changes)
     const totalAgainBefore = await cmp.totalRaised();
-    await (await cmp.connect(owner).refundAll()).wait();
+    await expect(cmp.connect(owner).refundAll()).to.be.revertedWith("Funds are already released");;
     const totalAgainAfter = await cmp.totalRaised();
     expect(totalAgainAfter).to.equal(totalAgainBefore);
   });
