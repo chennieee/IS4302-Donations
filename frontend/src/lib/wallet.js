@@ -1,14 +1,24 @@
-// Initialises Web3Modal (WalletConnect) + Wagmi configuration
-// Use this to get the user's wallet address
-
 import { createAppKit } from '@reown/appkit/react'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { WagmiProvider } from 'wagmi'
-import { sepolia } from '@reown/appkit/networks'  //testnet (test ETH, no real money)
+
+// Local Hardhat network
+const localhostChain = {
+  id: 31337,
+  name: 'Hardhat Local',
+  nativeCurrency: {
+    name: 'Ether',
+    symbol: 'ETH',
+    decimals: 18
+  },
+  rpcUrls: {
+    default: { http: ['http://127.0.0.1:8545'] },
+    public: { http: ['http://127.0.0.1:8545'] }
+  }
+}
 
 const projectId = import.meta.env.VITE_WC_PROJECT_ID
 const appUrl = import.meta.env.VITE_APP_URL
-//import appIconUrl from '../assets/react.svg?url'
 
 const metadata = {
     name: 'GoFundThem',
@@ -18,14 +28,13 @@ const metadata = {
 }
 
 const wagmiAdapter = new WagmiAdapter({
-  networks: [sepolia],
+  networks: [localhostChain],
   projectId
 })
 
-// Create AppKit (internally handles WalletConnect, injected wallets, etc)
 const appKit = createAppKit({
   adapters: [wagmiAdapter],
-  networks: [sepolia],
+  networks: [localhostChain],
   metadata,
   projectId,
   themeMode: 'light'
@@ -41,7 +50,6 @@ export function initWallet() {
       }
     }
   }
-
   return { wagmiConfig }
 }
 

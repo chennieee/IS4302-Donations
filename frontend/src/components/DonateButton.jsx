@@ -1,7 +1,12 @@
 import { useAccount, useChainId, useSwitchChain, useWriteContract } from 'wagmi'
-import { sepolia } from 'wagmi/chains'
 import { parseEther } from 'viem'
 import CampaignABI from '../abi/Campaign.json'
+
+// Local hardhat chain
+const localhostChain = {
+  id: 31337,
+  name: 'Hardhat Local'
+}
 
 export default function DonateButton({
   campaignAddr,
@@ -17,48 +22,44 @@ export default function DonateButton({
 
   async function donate() {
     try {
-      // 1. If web3modal not initialised properly, return console error
+      // Check if wallet modal exists
       if (!window.web3modal) {
         console.error('Web3Modal not initialized')
         return
       }
 
-      // 2. If wallet not connected yet, open modal
+      // If not connected, open wallet modal
       if (!isConnected) {
         await window.web3modal.open()
         return
       }
 
-      // 3. Make sure we're on Sepolia (11155111)
-      if (chainId !== sepolia.id) {
-        await switchChainAsync({ chainId: sepolia.id })
+      // If connected but wrong network, switch to localhost hardhat chain
+      if (chainId !== localhostChain.id) {
+        await switchChainAsync({ chainId: localhostChain.id })
       }
 
-      // 4. Validate amount
+      // Validate amount
       if (!amountEth || isNaN(amountEth) || Number(amountEth) <= 0) {
         alert('Please enter a valid donation amount')
         return
       }
 
-      // 5. Validate campaign address
+      // Validate campaign contract address
       if (!/^0x[a-fA-F0-9]{40}$/.test(campaignAddr)) {
         alert('Invalid campaign address')
         return
       }
 
-      // 6. Send tx: call donate() payable on the Campaign contract
-      await writeContract(
-        {
+      // Send transaction: Call donate() on Campaign contract
+      await writeContract({
           abi: CampaignABI,
           address: campaignAddr,
           functionName: 'donate',
           value: parseEther(amountEth)
-        }
-      )
+      })
 
-      if (onSuccess) {
-        onSuccess()
-      }
+      if (onSuccess) onSuccess()
     } catch (err) {
       console.error('Donation failed:', err)
       if (onError) {

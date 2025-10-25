@@ -7,10 +7,82 @@
     "outputs": []
   },
   {
+    "type": "function",
+    "name": "releaseMilestone",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "milestoneIndex", "type": "uint256" }
+    ],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "claimRefund",
+    "stateMutability": "nonpayable",
+    "inputs": [],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "enableRefundsIfFailed",
+    "stateMutability": "nonpayable",
+    "inputs": [],
+    "outputs": []
+  },
+  {
+    "type": "function",
+    "name": "owner",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address" }]
+  },
+  {
+    "type": "function",
+    "name": "verifiers",
+    "stateMutability": "view",
+    "inputs": [{ "name": "", "type": "address" }],
+    "outputs": [{ "name": "", "type": "bool" }]
+  },
+  {
+    "type": "function",
+    "name": "deadline",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "name",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "string" }]
+  },
+  {
+    "type": "function",
+    "name": "milestones",
+    "stateMutability": "view",
+    "inputs": [{ "name": "", "type": "uint256" }],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "totalRaised",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  },
+  {
+    "type": "function",
+    "name": "currentProposal",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256" }]
+  },
+
+  {
     "type": "event",
     "name": "DonationReceived",
     "inputs": [
-      { "name": "campaign", "type": "address", "indexed": true },
       { "name": "donor", "type": "address", "indexed": true },
       { "name": "amount", "type": "uint256", "indexed": false }
     ],
@@ -18,18 +90,50 @@
   },
   {
     "type": "event",
-    "name": "Released",
+    "name": "MilestoneAdded",
     "inputs": [
-      { "name": "campaign", "type": "address", "indexed": true },
-      { "name": "amount", "type": "uint256", "indexed": false }
+      { "name": "milestone", "type": "uint256", "indexed": false },
+      { "name": "index", "type": "uint256", "indexed": false }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "Refunded",
+    "name": "MilestoneProposed",
     "inputs": [
-      { "name": "campaign", "type": "address", "indexed": true },
+      { "name": "milestone", "type": "uint256", "indexed": false }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MilestoneAccepted",
+    "inputs": [
+      { "name": "milestone", "type": "uint256", "indexed": false }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MilestoneRejected",
+    "inputs": [
+      { "name": "milestone", "type": "uint256", "indexed": false }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FundsReleased",
+    "inputs": [
+      { "name": "amount", "type": "uint256", "indexed": false },
+      { "name": "milestoneIndex", "type": "uint256", "indexed": false }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FundsReturned",
+    "inputs": [
       { "name": "donor", "type": "address", "indexed": true },
       { "name": "amount", "type": "uint256", "indexed": false }
     ],
