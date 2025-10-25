@@ -6,10 +6,13 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract Campaign is ReentrancyGuard {
     address public owner;
     mapping(address => bool) public verifiers;
+
     uint256 public deadline;
     string public name;
     uint256[] public milestones;
+
     mapping(address => uint256) private contributions;
+    address[] private contributors;
     uint256 public totalRaised = 0;
     uint256 public currentProposal = 0;
 
@@ -37,6 +40,7 @@ contract Campaign is ReentrancyGuard {
         for (uint i = 0; i < len; i++) {
             verifiers[_verifiers[i]] = true;
         }
+        verifiers[owner] = true;
 
         len = _milestones.length;
         for (uint256 i = 0; i < len; i++) {
@@ -76,7 +80,7 @@ contract Campaign is ReentrancyGuard {
         require(
             len == 0 ||
                 (milestone > milestones[len - 1] &&
-                    milestones[len - 1] <= totalRaised),
+                    milestones[len - 1] >= totalRaised),
             "New milestone should be greater than current milestone!"
         );
         _;
@@ -89,8 +93,12 @@ contract Campaign is ReentrancyGuard {
 
     // Only accept denominations of 1 eth for now
     function donate() external payable nonReentrant campaignInProgress {
+        require(msg.value >= 1 ether, "Donations have to be at least 1 eth!");
+        require(msg.value % 1 ether == 0, "Donations must be whole ETH multiples");
         uint256 ethAmount = msg.value / 1 ether;
-        require(ethAmount >= 1, "Donations have to be at least 1 eth!");
+        if (contributions[msg.sender] == 0) {
+            contributors.push(msg.sender);
+        }
         contributions[msg.sender] += ethAmount;
         totalRaised += ethAmount;
         emit DonationReceived(msg.sender, ethAmount);
@@ -98,7 +106,7 @@ contract Campaign is ReentrancyGuard {
 
     function addMilestone(
         uint256 newMilestone
-    ) public validNewMilestone(newMilestone) campaignInProgress {
+    ) internal validNewMilestone(newMilestone) campaignInProgress {
         milestones.push(newMilestone);
         emit MilestoneAdded(newMilestone, milestones.length - 1);
     }
@@ -109,6 +117,11 @@ contract Campaign is ReentrancyGuard {
         require(currentProposal == 0, "Wait for current proposal to complete!");
         currentProposal = newMilestone;
         emit MilestoneProposed(newMilestone);
+    }
+
+    function getCurrentProposal() public view returns(uint256) {
+        require(currentProposal != 0, "There is no ongoing proposal");
+        return currentProposal;
     }
 
     function acceptProposal() external onlyVerifier hasProposal nonReentrant {
@@ -125,26 +138,62 @@ contract Campaign is ReentrancyGuard {
     }
 
     function releaseFunds() external onlyVerifier campaignEnded nonReentrant {
-        payable(owner).transfer(totalRaised);
+        require(totalRaised > 0,"Funds are already released");
+        payable(owner).transfer(totalRaised * 1 ether);
         emit FundsReleased(totalRaised, milestones.length);
     }
 
     // Only allow fund return when first milestone has not been hit
-    function returnFunds() external campaignInProgress nonReentrant {
+    function refund() external campaignInProgress nonReentrant {
         require(
             milestones.length == 1 && totalRaised < milestones[0],
             "Funds can no longer be returned!"
         );
         uint256 donationAmount = contributions[msg.sender];
         require(donationAmount > 0, "No contribution to return!");
-        payable(msg.sender).transfer(donationAmount);
+        payable(msg.sender).transfer(donationAmount * 1 ether);
         emit FundsReturned(msg.sender, donationAmount);
 
         totalRaised -= donationAmount;
         contributions[msg.sender] = 0;
     }
 
-    function getContribution() external view returns (uint256) {
-        return contributions[msg.sender];
+    function getContribution(address user) external view returns (uint256) {
+        return contributions[user];
     }
+
+    function getContributors() external view returns (address[] memory) {
+        return contributors;
+    }
+
+    function isVerifier(address newVerifier) public view returns (bool){
+        return verifiers[newVerifier];
+    }
+
+    function addVerifier(address newVerifier) onlyOwner public {
+        require(!isVerifier(newVerifier), "Address is already a verifier");
+        verifiers[newVerifier] = true;
+    }
+
+    function removeVerifier(address newVerifier) onlyOwner public {
+        require(isVerifier(newVerifier), "Address is already not a verifier");
+        verifiers[newVerifier] = false;
+    }
+
+    // Refund all contributors after campaign ends (owner-triggered)
+    function refundAll() external onlyOwner campaignEnded nonReentrant {
+        require(totalRaised > 0,"Funds are already released");
+        uint256 len = contributors.length;
+        for (uint256 i = 0; i < len; i++) {
+            address donor = contributors[i];
+            uint256 amount = contributions[donor];
+            if (amount > 0) {
+                payable(donor).transfer(amount * 1 ether);
+                emit FundsReturned(donor, amount);
+                totalRaised -= amount;
+                contributions[donor] = 0;
+            }
+        }
+    }
+
 }
