@@ -5,7 +5,6 @@ import Campaign from './pages/Campaign'
 import Donate from './pages/Donate'
 import MyProfile from './pages/MyProfile'
 import MyCampaigns from './pages/MyCampaigns'
-import CreateCampaign from './pages/CreateCampaign'
 import SidebarLayout from './components/SidebarLayout'
 import ConnectWalletButton from './components/ConnectWalletButton'
 import './index.css'
@@ -48,11 +47,7 @@ export default function App() {
               <MyCampaigns />
             </SidebarLayout>
           } />
-          <Route path="/create-campaign" element={
-            <SidebarLayout>
-              <CreateCampaign />
-            </SidebarLayout>
-          } />
+          {/* Create campaign route removed — creation is now available from My Campaigns (+) */}
           <Route path="/profile" element={
             <SidebarLayout>
               <MyProfile />

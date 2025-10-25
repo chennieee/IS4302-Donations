@@ -9,11 +9,10 @@ export default function SidebarLayout({ children }) {
   const location = useLocation()
 
   const navItems = [
-    { path: '/campaigns', label: 'All Campaigns' },
-    { path: '/my-donations', label: 'My Donations' },
-    { path: '/my-campaigns', label: 'My Campaigns' },
-    { path: '/create-campaign', label: 'Create a campaign' },
-    { path: '/profile', label: 'My Profile' }
+  { path: '/campaigns', label: 'All Campaigns' },
+  { path: '/my-donations', label: 'My Donations' },
+  { path: '/my-campaigns', label: 'My Campaigns' },
+  { path: '/profile', label: 'My Profile' }
   ]
 
   const isActive = (path) => location.pathname === path
