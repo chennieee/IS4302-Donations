@@ -186,7 +186,9 @@ describe("CampaignVotersFactory", function () {
     expect(oAfter).to.equal(0n);
     expect(totalAfter).to.equal(totalBefore - uBefore - oBefore);
     const totalAgainBefore = await cmp.totalRaised();
-    await (await cmp.connect(owner).refundAll()).wait();
+    await expect(cmp.connect(owner).refundAll()).to.be.revertedWith(
+      "No contribution to return!"
+    );
     const totalAgainAfter = await cmp.totalRaised();
     expect(totalAgainAfter).to.equal(totalAgainBefore);
   });

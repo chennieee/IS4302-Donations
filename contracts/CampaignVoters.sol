@@ -24,7 +24,6 @@ contract CampaignVoters is ReentrancyGuard {
     uint256 public proposalDeadline; // start + 1 days
     uint256 public yesVotes;
     uint256 public noVotes;
-    uint256 public totalRequired;
     mapping(address => bool) public votedThisProposal;
 
     // Events
@@ -141,25 +140,12 @@ contract CampaignVoters is ReentrancyGuard {
         proposalStartTime = block.timestamp;
         proposalDeadline = block.timestamp + 1 days;
 
-        // Count eligible verifiers (owner included)
-        yesVotes = 0;
-        noVotes = 0;
-        totalRequired = 0;
-        uint256 len = verifierList.length;
-        for (uint256 i = 0; i < len; i++) {
-            address v = verifierList[i];
-            if (verifiers[v]) {
-                votedThisProposal[v] = false;
-                totalRequired += 1;
-            }
-        }
-
         emit MilestoneProposed(newMilestone);
-        emit ProposalStarted(newMilestone, proposalStartTime, proposalDeadline, totalRequired);
+        emit ProposalStarted(newMilestone, proposalStartTime, proposalDeadline, verifierList.length);
     }
 
     function getCurrentProposal() public view hasProposal returns(uint256[6] memory) {
-        return [currentProposal, proposalStartTime, proposalDeadline, yesVotes, noVotes, totalRequired];
+        return [currentProposal, proposalStartTime, proposalDeadline, yesVotes, noVotes, verifierList.length];
     }
 
     // Verifiers vote within the 1-day window. Majority immediately finalizes.
@@ -178,7 +164,7 @@ contract CampaignVoters is ReentrancyGuard {
     }
 
     function checkFinalize() public onlyVerifier hasProposal returns(string memory) {
-        if ((yesVotes + noVotes == totalRequired) || block.timestamp > proposalDeadline) {
+        if ((yesVotes + noVotes == verifierList.length) || block.timestamp > proposalDeadline) {
             if (yesVotes > noVotes) {
                 acceptProposal();
                 return "Proposal has been accepted!";
@@ -187,36 +173,33 @@ contract CampaignVoters is ReentrancyGuard {
                 return "Proposal has been rejected!";
             }        
         }
-        return "Proposal is not finalizing yet";
+        return "Proposal is not finalized yet";
     }
 
     function acceptProposal() internal {
         uint256 acceptedMilestone = currentProposal;
         addMilestone(currentProposal);
-        clearProposal();
         emit MilestoneAccepted(acceptedMilestone);
+        clearProposal();
     }
 
     function rejectProposal() internal {
         uint256 rejectedMilestone = currentProposal;
-        clearProposal();
         emit MilestoneRejected(rejectedMilestone);
+        clearProposal();
     }
 
     function clearProposal() internal {
         uint256 len = verifierList.length;
         for (uint256 i = 0; i < len; i++) {
             address v = verifierList[i];
-            if (verifiers[v]) {
-                votedThisProposal[v] = false;
-            }
+            votedThisProposal[v] = false;
         }
         currentProposal = 0;
         proposalStartTime = 0;
         proposalDeadline = 0;
         yesVotes = 0;
         noVotes = 0;
-        totalRequired = 0;
     }
 
     function releaseFunds() external onlyVerifier campaignEnded nonReentrant {
@@ -240,6 +223,7 @@ contract CampaignVoters is ReentrancyGuard {
     }
 
     function refundAll() external onlyOwner campaignEnded nonReentrant {
+        require(totalRaised > 0, "No contribution to return!");
         uint256 len = contributors.length;
         for (uint256 i = 0; i < len; i++) {
             address donor = contributors[i];
