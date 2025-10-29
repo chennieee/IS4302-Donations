@@ -111,6 +111,11 @@ contract CampaignVoters is ReentrancyGuard {
         _;
     }
 
+    modifier noProposal() {
+        require(currentProposal == 0, "Wait for current proposal to complete!");
+        _;
+    }
+
     // Only accept denominations of 1 eth for now
     function donate() external payable nonReentrant campaignInProgress {
         require(msg.value >= 1 ether, "Donations have to be at least 1 eth!");
@@ -255,24 +260,20 @@ contract CampaignVoters is ReentrancyGuard {
     }
 
     // Admin for verifiers
-    function addVerifier(address newVerifier) onlyOwner public {
-        require(currentProposal == 0, "Wait for current proposal to complete!");
+    function addVerifier(address newVerifier) noProposal onlyOwner public {
         require(!isVerifier(newVerifier), "Address is already a verifier");
         verifiers[newVerifier] = true;
         verifierList.push(newVerifier);
     }
 
-    function removeVerifier(address newVerifier) onlyOwner public {
-        require(currentProposal == 0, "Wait for current proposal to complete!");
+    function removeVerifier(address newVerifier) noProposal onlyOwner public {
         require(isVerifier(newVerifier), "Address is already not a verifier");
         verifiers[newVerifier] = false;
         uint256 tempNum = 0;
         while(verifierList[tempNum] != newVerifier){
                 tempNum += 1;
         }
-        for(tempNum += 1; tempNum < verifierList.length; tempNum += 1){
-            verifierList[tempNum - 1] = verifierList[tempNum];
-        }
+        verifierList[tempNum] = verifierList[verifierList.length - 1];
         verifierList.pop();
     }
 }
