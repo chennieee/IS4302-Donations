@@ -1,12 +1,15 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { useAccount } from 'wagmi'
 import { api } from '../lib/api'
 
 export default function Campaign() {
-  const { address } = useParams()
+  //const { address } = useParams()
   const [c, setC] = useState(null)
   const [err, setErr] = useState('')
   const [donations, setDonations] = useState([])
+  const { address: me } = useAccount()
+  const isMine = me && c?.organizer && me.toLowerCase() === c.organizer.toLowerCase()
 
   useEffect(() => {
     (async () => {
@@ -95,12 +98,9 @@ export default function Campaign() {
 
         {/* Action Buttons */}
         <div className="campaign-actions">
-          <Link to={`/campaign/${address}/donate`} className="campaign-btn campaign-btn-donate">
-            Donate
-          </Link>
-          {/*<button className="campaign-btn campaign-btn-share">
-            Share
-          </button>*/}
+          {isMine 
+            ? (<div className="campaign-btn" style={{ background: '#0f172a', color: '#fff' }}>My campaign</div>) 
+            : (<Link to={`/campaign/${address}/donate`} className="campaign-btn campaign-btn-donate">Donate</Link>)}
         </div>
       </div>
 
