@@ -1,8 +1,9 @@
 import { useAccount, useChainId, useSwitchChain } from 'wagmi'
 
 // Local hardhat chain
+const CHAIN_ID = import.meta.env.VITE_CHAIN_ID
 const localhostChain = {
-    id: 31337,
+    id: CHAIN_ID,
     name: 'Hardhat Local'
 }
 

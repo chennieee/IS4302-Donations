@@ -13,7 +13,7 @@ export default function Home() {
       try {
         const res = await api.listCampaigns()
         if (!alive) return
-        setList(res?.items ?? [])
+        setList(res?.campaigns ?? [])
         setStatus('ok')
       } catch (e) { 
         if (!alive) return
