@@ -65,7 +65,7 @@ export default function MyProfile() {
             ...prev,
             username: data.username || prev.username || '',
             walletAddress: data.wallet_addr || address,
-            avatarUrl: data.avatarUrl || prev.avatarUrl || ''
+            avatarUrl: data.avatar_url || prev.avatarUrl || ''
           }))
         } else if (res.status === 404) {
           //profile not created yet

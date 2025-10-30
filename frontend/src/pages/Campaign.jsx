@@ -16,10 +16,10 @@ export default function Campaign() {
         // Use real recent activity from API
         if (res.recentActivity && res.recentActivity.length > 0) {
           const donationEvents = res.recentActivity
-            .filter(activity => activity.eventName === 'Donated')
+            .filter(activity => activity.eventName === 'DonationReceived')
             .map(activity => ({
-              donor: activity.args.donor || 'Anonymous',
-              amount: `${activity.args.amount || 0} ETH`
+              donor: activity.args?.donor || 'Anonymous',
+              amount: `${activity.args?.amount || 0} ETH`
             }))
           setDonations(donationEvents)
         }
