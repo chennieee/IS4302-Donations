@@ -378,7 +378,7 @@ class CampaignController {
   validateCreateCampaign(data) {
     const schema = Joi.object({
       name: Joi.string().min(3).max(200).required(),
-      description: Joi.string().min(10).max(1000).optional().allow(''),
+      description: Joi.string().max(1000).optional().allow('', null).default(''),
       image: Joi.string().optional().allow(null, ''),
       organizer: Joi.string().pattern(/^0x[a-fA-F0-9]{40}$/).required(),
       deadline: Joi.number().integer().min(Math.floor(Date.now() / 1000)).required(),
