@@ -3,7 +3,7 @@ import { parseEther } from 'viem'
 import CampaignABI from '../abi/Campaign.json'
 
 // Local hardhat chain
-const CHAIN_ID = import.meta.env.VITE_CHAIN_ID
+const CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID ?? 1337)
 const localhostChain = {
   id: CHAIN_ID,
   name: 'Hardhat Local'
