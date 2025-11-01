@@ -20,10 +20,11 @@ async function request(method, path, body) {
 }
 
 export const api = {
-    // campaigns
+    // campaigns + donations
     listCampaigns: () => request('GET', '/campaigns'),
     getCampaign: (addr) => request('GET', `/campaigns/${addr}`),
     createCampaign: (data) => request('POST', `/campaigns`, data),
+    recordDonation: (addr, payload) => request('POST', `/campaigns/${addr}/donate`, payload),
 
     // users
     getUser: (walletAddr) => request('GET', `/users/${walletAddr}`),

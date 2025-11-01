@@ -44,6 +44,7 @@ app.get('/api/campaigns', (req, res) => campaignController.getCampaigns(req, res
 app.post('/api/campaigns', (req, res) => campaignController.createCampaign(req, res));
 app.get('/api/campaigns/:address', (req, res) => campaignController.getCampaign(req, res));
 app.get('/api/campaigns/:address/events', (req, res) => campaignController.getCampaignEvents(req, res));
+app.post('/api/campaigns/:address/donate', (req, res) => campaignController.recordDonation(req, res));
 
 // User routes
 app.get('/api/users/:address', userController.getUser);

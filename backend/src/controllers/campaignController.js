@@ -11,7 +11,7 @@ class CampaignController {
     await this.db.createTables();
   }
 
-  // GET /campaigns
+  // GET all campaigns --> /campaigns
   async getCampaigns(req, res) {
     try {
       const { error, value } = this.validateCampaignsQuery(req.query);
@@ -106,7 +106,7 @@ class CampaignController {
     }
   }
 
-  // GET /campaign/:address
+  // GET 1 campaign --> /campaign/:address
   async getCampaign(req, res) {
     try {
       const { address } = req.params;
@@ -187,7 +187,7 @@ class CampaignController {
     }
   }
 
-  // GET /campaign/:address/events
+  // GET 1 campaign's events --> /campaign/:address/events
   async getCampaignEvents(req, res) {
     try {
       const { address } = req.params;
@@ -291,7 +291,7 @@ class CampaignController {
     return /^0x[a-fA-F0-9]{40}$/.test(address);
   }
 
-  // POST /campaigns - Create a new campaign
+  // POST 1 campaign (Create a new campaign) --> /campaigns
   async createCampaign(req, res) {
     try {
       const { error, value } = this.validateCreateCampaign(req.body);
@@ -300,6 +300,14 @@ class CampaignController {
       }
 
       const { name, description, image, organizer, deadline, milestones } = value;
+
+      // Require user profile (username + wallet address) to create campaign
+      const organizerRow = await this.db.get(
+        `SELECT username FROM users WHERE wallet_addr = ?`, [organizer.toLowerCase()]
+      );
+      if (!organizerRow || !organizerRow.username) {
+        return res.status(400).json({ error: 'Complete profile (username + wallet address) required'});
+      }
 
       // Generate a mock campaign address (in production, this would come from blockchain)
       const campaignAddress = '0x' + Math.random().toString(16).substring(2, 42).padEnd(40, '0');
@@ -331,7 +339,7 @@ class CampaignController {
         deadline,
         createdBlock,
         new Date().toISOString(),
-        1337 // Default chain ID (local hardhat network)
+        Number(process.env.CHAIN_ID || 31337) // Default chain ID (local hardhat network)
       ]);
 
       // Insert milestones
@@ -384,9 +392,127 @@ class CampaignController {
       deadline: Joi.number().integer().min(Math.floor(Date.now() / 1000)).required(),
       milestones: Joi.array().items(Joi.number().positive()).min(1).max(10).required()
     });
-
     return schema.validate(data);
   }
+
+  // POST 1 donation --> /campaigns/:address/donate
+  async recordDonation(req, res) {
+    try {
+      const addr = (req.params.address || '').toLowerCase();
+      if (!this.isValidAddress(addr)) {
+        return res.status(400).json({ error: 'Invalid campaign address' });
+      }
+
+      const { error, value } = this.validateDonationPayload(req.body);
+      if (error) return res.status(400).json({ error: error.details[0].message });
+
+      const { txHash, logIndex, donor, amount, blockNumber, chainId, finalized } = value;
+
+      await this.db.beginTransaction();
+
+      // Ensure campaign exists
+      const campaign = await this.db.get(
+        `SELECT addr FROM campaigns WHERE addr = ?`, [addr]
+      );
+      if (!campaign) {
+        await this.db.rollback();
+        return res.status(404).json({ error: 'Campaign not found' });
+      }
+
+      // Donor must have complete profile (username + wallet address)
+      const donorRow = await this.db.get(
+        `SELECT username FROM users WHERE wallet_addr = ?`,
+        [donor.toLowerCase()]
+      );
+      if (!donorRow || !donorRow.username) {
+        await this.db.rollback();
+        return res.status(400).json({ error: 'Complete profile (username + wallet address) required' });
+      }
+
+      // Upsert donor into users (username may be set later by PUT /api/users/:address)
+      await this.db.run(
+        `INSERT INTO users (wallet_addr, username, avatar_url, created_at, updated_at)
+        VALUES (?, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(wallet_addr) DO NOTHING`,
+        [donor.toLowerCase()]
+      );
+
+      // Insert donation
+      await this.db.run(
+        `INSERT INTO donations (tx_hash, log_index, campaign_addr, donor, amount,
+                                block_number, chain_id, finalized)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(tx_hash, log_index) DO UPDATE SET
+          finalized = excluded.finalized`,
+        [txHash, logIndex, addr, donor.toLowerCase(), amount, blockNumber, chainId, finalized ? 1 : 0]
+      );
+
+      // Event log for recent activity panel
+      await this.db.run(
+        `INSERT INTO event_log (tx_hash, log_index, block_number, address, event_name, args_json, chain_id, finalized)
+        VALUES (?, ?, ?, ?, 'Donation', ?, ?, ?)
+        ON CONFLICT(tx_hash, log_index) DO UPDATE SET finalized = excluded.finalized`,
+        [
+          txHash,
+          logIndex,
+          blockNumber,
+          addr,
+          JSON.stringify({ donor: donor.toLowerCase(), amount }),
+          chainId,
+          finalized ? 1 : 0
+        ]
+      );
+
+      // Recompute aggregates (total and distinct donors)
+      const totals = await this.db.get(
+        `SELECT
+            COALESCE((SELECT SUM(CAST(amount AS INTEGER)) FROM donations WHERE campaign_addr = ?), 0) AS total_raised,
+            COALESCE((SELECT COUNT(DISTINCT donor) FROM donations WHERE campaign_addr = ?), 0) AS donor_count`,
+        [addr, addr]
+      );
+
+      await this.db.run(
+        `INSERT INTO aggregates (campaign_addr, total_raised, donor_count, updated_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(campaign_addr) DO UPDATE SET
+          total_raised = excluded.total_raised,
+          donor_count = excluded.donor_count,
+          updated_at = CURRENT_TIMESTAMP`,
+        [addr, String(totals.total_raised), totals.donor_count]
+      );
+
+      await this.db.commit();
+
+      return res.status(200).json({
+        success: true,
+        campaign: addr,
+        updated: {
+          totalRaised: String(totals.total_raised),
+          donorCount: totals.donor_count
+        }
+      });
+    } catch (e) {
+      console.error('recordDonation error:', e);
+      try { await this.db.rollback(); } catch {}
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  validateDonationPayload(body) {
+    const schema = Joi.object({
+      txHash: Joi.string().pattern(/^0x([A-Fa-f0-9]{64})$/).required(),
+      logIndex: Joi.number().integer().min(0).required(),
+      donor: Joi.string().pattern(/^0x[a-fA-F0-9]{40}$/).required(),
+      amount: Joi.string().pattern(/^[0-9]+$/).required(), // store as string (wei)
+      blockNumber: Joi.number().integer().min(0).required(),
+      chainId: Joi.number().integer().min(1).required(),
+      finalized: Joi.boolean().default(true)
+    });
+    return schema.validate(body);
+  }
+
+
+
 }
 
 module.exports = CampaignController;
