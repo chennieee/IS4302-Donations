@@ -2,12 +2,15 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAccount } from 'wagmi'
 import { api } from '../lib/api'
+import { formatEther } from 'viem'
 
 export default function Campaign() {
-  //const { address } = useParams()
+  const { address } = useParams()
   const [c, setC] = useState(null)
   const [err, setErr] = useState('')
   const [donations, setDonations] = useState([])
+  const [organizerName, setOrganizerName] = useState('')
+  const [organizerAvatar, setOrganizerAvatar] = useState('')
   const { address: me } = useAccount()
   const isMine = me && c?.organizer && me.toLowerCase() === c.organizer.toLowerCase()
 
@@ -16,26 +19,52 @@ export default function Campaign() {
       try {
         const res = await api.getCampaign(address)
         setC(res)
-        // Use real recent activity from API
-        if (res.recentActivity && res.recentActivity.length > 0) {
+
+        // Organizer username + avatar
+        if (res.organizer) {
+          try {
+            const user = await api.getUser(res.organizer)
+            setOrganizerName(user?.username || `${res.organizer.slice(0,6)}…${res.organizer.slice(-4)}`)
+            setOrganizerAvatar(user?.avatar_url || '')
+          } catch {
+            setOrganizerName(`${res.organizer.slice(0,6)}…${res.organizer.slice(-4)}`)
+            setOrganizerAvatar('')
+          }
+        }
+
+        // Recent donation activity
+        if (res.recentActivity?.length) {
           const donationEvents = res.recentActivity
-            .filter(activity => activity.eventName === 'DonationReceived')
-            .map(activity => ({
-              donor: activity.args?.donor || 'Anonymous',
-              amount: `${activity.args?.amount || 0} ETH`
+            .filter(a => a.eventName === "DonationReceived")
+            .map(a => ({
+              donor: a.args?.donor || '',
+              amountEth: a.args?.amount ? Number(formatEther(BigInt(a.args.amount))) : 0
             }))
-          setDonations(donationEvents)
+
+          // Resolve donor usernames
+          const withNames = await Promise.all(donationEvents.map(async donation => {
+            if (!donation.donor) return { donorName: 'Anonymous', amountEth: donation.amountEth }
+            try {
+              const user = await api.getUser(donation.donor)
+              return { donorName: user?.username || `${donation.donor.slice(0,6)}…${donation.donor.slice(-4)}`, amountEth: donation.amountEth }
+            } catch {
+              return { donorName: `${donation.donor.slice(0,6)}…${donation.donor.slice(-4)}`, amountEth: donation.amountEth }
+            }
+          }))
+          setDonations(withNames)
         }
       } catch (e) { setErr(e.message) }
     })()
   }, [address])
 
+
   // Calculate donation progress
   const donationStats = useMemo(() => {
     if (!c) return { donated: 0, goal: 0, percentage: 0, donorCount: 0 }
     const donated = parseFloat(c.totalRaised) || 0
-    const goal = c.milestones && c.milestones.length > 0 ?
-      Math.max(...c.milestones.map(m => typeof m === 'number' ? m : parseFloat(m.targetAmount) || 0)) : 100
+    const goal = c.milestones?.length
+      ? Math.max(...c.milestones.map(m => typeof m === 'number' ? m : parseFloat(m.targetAmount) || 0))
+      : 100
     const percentage = goal > 0 ? Math.round((donated / goal) * 100) : 0
     const donorCount = c.donorCount || 0
     return { donated, goal, percentage, donorCount }
@@ -83,12 +112,20 @@ export default function Campaign() {
 
         {/* Creator Info */}
         <div className="campaign-creator">
-          <div className="creator-avatar">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-            </svg>
+          <div className="creator-avatar" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {organizerAvatar ? (
+              <img
+                src={organizerAvatar}
+                alt="profile"
+                style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }}
+              />
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+            )}
           </div>
-          <span className="creator-name">Created by {c.organizer || 'Unknown'}</span>
+          <span className="creator-name">Created by {organizerName || 'Unknown'}</span>
         </div>
 
         {/* Campaign Description */}
@@ -178,8 +215,8 @@ export default function Campaign() {
                   </svg>
                 </div>
                 <div className="activity-info">
-                  <div className="activity-donor">{donation.donor}</div>
-                  <div className="activity-amount">{donation.amount}</div>
+                  <div className="activity-donor">{donation.donorName}</div>
+                  <div className="activity-amount">{donation.amountEth} ETH</div>
                 </div>
               </div>
             ))}

@@ -2,7 +2,7 @@ import { createAppKit } from '@reown/appkit/react'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { WagmiProvider } from 'wagmi'
 
-const CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID ?? 1337)
+const CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID ?? 31337)
 const RPC_URL = import.meta.env.VITE_RPC_URL ?? 'http://127.0.0.1:8545'
 
 // Local Hardhat network

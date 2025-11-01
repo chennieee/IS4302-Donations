@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAccount } from 'wagmi'
+import { useNavigate } from 'react-router-dom'
 import CampaignCard from '../components/CampaignCard'
 import { api } from '../lib/api'
 
@@ -7,7 +8,7 @@ export default function MyCampaigns() {
   const { address, isConnected } = useAccount()
   const [items, setItems] = useState([])
   const [status, setStatus] = useState('loading')
-  const [showCreate, setShowCreate] = useState(false)
+  const navigate = useNavigate()
 
   const organizer = (address || '').toLowerCase()
 
@@ -56,7 +57,7 @@ export default function MyCampaigns() {
         </h1>
         <button
           aria-label="Create a new campaign"
-          onClick={() => setShowCreate(s => !s)}
+          onClick={() => navigate('/create')}
           style={{
             width: '40px',
             height: '40px',
@@ -77,18 +78,6 @@ export default function MyCampaigns() {
         </button>
       </div>
       <div style={{ height: 20 }} />
-
-      {showCreate && (
-        <div style={{ marginTop: '1rem' }}>
-          <CreateCampaign
-            showTitle
-            onDone={async () => {
-              setShowCreate(false)
-              await fetchMine()   // ← refresh list after creating
-            }}
-          />
-        </div>
-      )}
 
       {status === 'error' && (
         <div className="p-4 text-red-600">Failed to fetch campaigns. Check your backend/API URL.</div>

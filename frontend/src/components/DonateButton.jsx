@@ -1,13 +1,12 @@
-import { useAccount, useChainId, useSwitchChain, useWriteContract } from 'wagmi'
+import { useAccount, useChainId, useSwitchChain, useWriteContract, usePublicClient } from 'wagmi'
+import { useNavigate } from 'react-router-dom'
 import { parseEther } from 'viem'
 import CampaignABI from '../abi/Campaign.json'
+import { api } from '../lib/api'
 
 // Local hardhat chain
-const CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID ?? 1337)
-const localhostChain = {
-  id: CHAIN_ID,
-  name: 'Hardhat Local'
-}
+const CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID ?? 31337)
+const localhostChain = { id: CHAIN_ID, name: 'Hardhat Local' }
 
 export default function DonateButton({
   campaignAddr,
@@ -16,10 +15,12 @@ export default function DonateButton({
   onSuccess,
   onError
 }) {
-  const { isConnected } = useAccount()
+  const { address: donor, isConnected } = useAccount()
   const chainId = useChainId()
   const { switchChainAsync } = useSwitchChain()
-  const { writeContract, isPending } = useWriteContract()
+  const { writeContractAsync, isPending } = useWriteContract()
+  const publicClient = usePublicClient()
+  const navigate = useNavigate()
 
   async function donate() {
     try {
@@ -35,12 +36,19 @@ export default function DonateButton({
         return
       }
 
-      // If connected but wrong network, switch to localhost hardhat chain
+      const user = await api.getUser(donor.toLowerCase()).catch(() => null)
+      if (!user?.username) {
+        alert('Please set up your profile before making a donation.')
+        navigate('/profile')
+        return
+      }
+
+      // If connected but wrong network, switch to local hardhat chain
       if (chainId !== localhostChain.id) {
         await switchChainAsync({ chainId: localhostChain.id })
       }
 
-      // Validate amount
+      // Validate donation amount
       if (!amountEth || isNaN(amountEth) || Number(amountEth) <= 0) {
         alert('Please enter a valid donation amount')
         return
@@ -52,24 +60,39 @@ export default function DonateButton({
         return
       }
 
-      // Send transaction: Call donate() on Campaign contract
-      await writeContract({
-          abi: CampaignABI,
-          address: campaignAddr,
-          functionName: 'donate',
-          value: parseEther(amountEth)
+      // On-chain call --> Get tx hash
+      const wei = parseEther(amountEth)
+      const hash = await writeContractAsync({
+        abi: CampaignABI,
+        address: campaignAddr,
+        functionName: 'donate',
+        value: wei
+      })
+
+      // Wait for confirmation & receipt
+      const receipt = await publicClient.waitForTransactionReceipt({ hash })
+
+      // POST donation to backend
+      const logIndex = receipt.logs?.[0]?.logIndex ?? 0
+      await api.recordDonation(campaignAddr, {
+        txHash: hash,
+        logIndex,
+        donor,
+        amount: wei.toString(),
+        blockNumber: Number(receipt.blockNumber),
+        chainId: localhostChain.id,
+        finalized: true
       })
 
       if (onSuccess) onSuccess()
+      alert("Thank you for your kind donation!")
     } catch (err) {
-      console.error('Donation failed:', err)
-      if (onError) {
-        onError(err)
-      } else {
-        alert('Transaction failed or was rejected.')
-      }
+      console.error("Donation failed:", err)
+      if (onError) onError(err);
+      else alert("Transaction failed or was rejected.")
     }
   }
+
 
   return (
     <button

@@ -8,6 +8,7 @@ import MyCampaigns from './pages/MyCampaigns'
 import SidebarLayout from './components/SidebarLayout'
 import ConnectWalletButton from './components/ConnectWalletButton'
 import './index.css'
+import CreateCampaign from './pages/CreateCampaign'
 
 export default function App() {
   const location = useLocation()
@@ -47,7 +48,11 @@ export default function App() {
               <MyCampaigns />
             </SidebarLayout>
           } />
-          {/* Create campaign route removed — creation is now available from My Campaigns (+) */}
+          <Route path="/create" element={
+            <SidebarLayout>
+              <CreateCampaign />
+            </SidebarLayout>
+            } />
           <Route path="/profile" element={
             <SidebarLayout>
               <MyProfile />
