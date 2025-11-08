@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_BACKEND_URL
+const BASE = import.meta.env.VITE_BACKEND_URL || ''
 const API_PREFIX = '/api'
 
 // Build url structure (e.g. http://localhost:3001/api/campaigns)
@@ -6,6 +6,13 @@ const isAbsolute = (p) => /^https?:\/\//i.test(p)
 const buildUrl = (path) => {
   if (isAbsolute(path)) return path
   const safePath = path.startsWith('/') ? path : `/${path}`
+
+  // If BASE is empty, use Vite proxy (just /api/path)
+  if (!BASE) {
+    return `${API_PREFIX}${safePath}`
+  }
+
+  // Otherwise use full URL (BASE/api/path)
   return `${BASE}${API_PREFIX}${safePath}`
 }
 
@@ -20,11 +27,10 @@ async function request(method, path, body) {
 }
 
 export const api = {
-    // campaigns + donations
+    // campaigns
     listCampaigns: () => request('GET', '/campaigns'),
     getCampaign: (addr) => request('GET', `/campaigns/${addr}`),
     createCampaign: (data) => request('POST', `/campaigns`, data),
-    recordDonation: (addr, payload) => request('POST', `/campaigns/${addr}/donate`, payload),
 
     // users
     getUser: (walletAddr) => request('GET', `/users/${walletAddr}`),
