@@ -60,7 +60,13 @@ export default function DonateButton({
         return
       }
 
-      // On-chain call --> Get tx hash
+      // Send transaction: Call donate() on Campaign contract
+      console.log('Sending donation transaction:', {
+        campaignAddr,
+        amountEth,
+        value: parseEther(amountEth).toString()
+      })
+
       const wei = parseEther(amountEth)
       const hash = await writeContractAsync({
         abi: CampaignABI,
@@ -69,30 +75,38 @@ export default function DonateButton({
         value: wei
       })
 
-      // Wait for confirmation & receipt
+      console.log('Donation transaction sent. Hash:', hash)
+
+      // Wait for confirmation
       const receipt = await publicClient.waitForTransactionReceipt({ hash })
 
-      // POST donation to backend
-      const logIndex = receipt.logs?.[0]?.logIndex ?? 0
-      await api.recordDonation(campaignAddr, {
-        txHash: hash,
-        logIndex,
-        donor,
-        amount: wei.toString(),
-        blockNumber: Number(receipt.blockNumber),
-        chainId: localhostChain.id,
-        finalized: true
-      })
+      // The indexer will automatically pick up the donation
+      // But we can optionally record it for immediate feedback
+      if (api.recordDonation) {
+        const logIndex = receipt.logs?.[0]?.logIndex ?? 0
+        await api.recordDonation(campaignAddr, {
+          txHash: hash,
+          logIndex,
+          donor,
+          amount: wei.toString(),
+          blockNumber: Number(receipt.blockNumber),
+          chainId: localhostChain.id,
+          finalized: true
+        }).catch(err => console.warn('Backend recording failed:', err))
+      }
 
       if (onSuccess) onSuccess()
       alert("Thank you for your kind donation!")
+
     } catch (err) {
-      console.error("Donation failed:", err)
-      if (onError) onError(err);
-      else alert("Transaction failed or was rejected.")
+      console.error('Donation failed:', err)
+      if (onError) {
+        onError(err)
+      } else {
+        alert('Transaction failed or was rejected.')
+      }
     }
   }
-
 
   return (
     <button

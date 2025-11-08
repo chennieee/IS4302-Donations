@@ -1,63 +1,60 @@
-import { useEffect, useState, useCallback } from 'react'
+// My Campaigns page - Shows campaigns created by the current user
+// Displays all campaigns organized by the logged-in user
+
+import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
-import { useNavigate } from 'react-router-dom'
-import CampaignCard from '../components/CampaignCard'
 import { api } from '../lib/api'
+import CampaignCard from '../components/CampaignCard'
+import CreateCampaign from './CreateCampaign'
 
 export default function MyCampaigns() {
-  const { address, isConnected } = useAccount()
-  const [items, setItems] = useState([])
-  const [status, setStatus] = useState('loading')
-  const navigate = useNavigate()
+  const [campaigns, setCampaigns] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
+  const { address } = useAccount()
 
-  const organizer = (address || '').toLowerCase()
-
-  const fetchMine = useCallback(async () => {
+  const fetchMyCampaigns = async () => {
     try {
-      if (!isConnected || !organizer) {
-        setItems([])
-        setStatus('ok')
-        return
+      setLoading(true)
+      const response = await api.listCampaigns()
+
+      // Filter campaigns by organizer if wallet is connected
+      if (address) {
+        const myCampaigns = response.campaigns.filter(
+          c => c.organizer?.toLowerCase() === address.toLowerCase()
+        )
+        setCampaigns(myCampaigns)
+      } else {
+        setCampaigns([])
       }
-      setStatus('loading')
-      const res = await api.listCampaigns({ organizer })
-      const mine = (res?.campaigns ?? []).filter(
-        (c) => (c?.organizer || '').toLowerCase() === organizer
-      )
-      setItems(mine)
-      setStatus('ok')
-    } catch (e) {
-      console.error(e)
-      setItems([])
-      setStatus('error')
+    } catch (error) {
+      console.error('Error fetching campaigns:', error)
+      setCampaigns([])
+    } finally {
+      setLoading(false)
     }
-  }, [isConnected, organizer])
+  }
 
   useEffect(() => {
-    let alive = true
-    ;(async () => {
-      await fetchMine()
-    })()
-    return () => { alive = false }
-  }, [fetchMine])
+    fetchMyCampaigns()
+  }, [address])
 
-  if (status === 'loading') return <div className="p-4">Loading…</div>
-  if (!isConnected) return <div className="p-4">Connect your wallet to see your campaigns.</div>
-
-  const hasItems = items.length > 0
+  if (loading) {
+    return (
+      <div className="my-campaigns-container">
+        <h1 className="my-campaigns-title">My Campaigns</h1>
+        <p>Loading your campaigns...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="my-campaigns-container">
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <h1
-          className="my-campaigns-title"
-          style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', margin: 0, lineHeight: 1 }}
-        >
-          {hasItems ? 'My Campaigns' : "You haven’t created any campaigns yet."}
-        </h1>
+        <h1 className="my-campaigns-title" style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', margin: 0, lineHeight: '1' }}>My Campaigns</h1>
         <button
           aria-label="Create a new campaign"
-          onClick={() => navigate('/create')}
+          onClick={() => setShowCreate(s => !s)}
           style={{
             width: '40px',
             height: '40px',
@@ -77,16 +74,34 @@ export default function MyCampaigns() {
           +
         </button>
       </div>
-      <div style={{ height: 20 }} />
 
-      {status === 'error' && (
-        <div className="p-4 text-red-600">Failed to fetch campaigns. Check your backend/API URL.</div>
+      {showCreate && (
+        <div style={{ marginTop: '1rem' }}>
+          <CreateCampaign
+            /* show embedded form title so it looks like the CreateCampaign page */
+            showTitle={true}
+            onDone={() => {
+              // Close the embedded create form and refresh campaigns
+              setShowCreate(false)
+              fetchMyCampaigns()
+            }}
+          />
+        </div>
       )}
 
-      {hasItems && (
-        <div className="campaigns-grid" style={{ marginTop: 20 }}>
-          {items.map(c => (
-            <CampaignCard key={c.address} c={c} />
+      {!address ? (
+        <div className="empty-state">
+          <p>Please connect your wallet to view your campaigns.</p>
+        </div>
+      ) : campaigns.length === 0 ? (
+        <div className="empty-state">
+          <p>You haven't created any campaigns yet.</p>
+          <p>Start making a difference by creating your first campaign!</p>
+        </div>
+      ) : (
+        <div className="campaigns-grid">
+          {campaigns.map(campaign => (
+            <CampaignCard key={campaign.address} c={campaign} />
           ))}
         </div>
       )}

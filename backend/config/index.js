@@ -11,7 +11,9 @@ module.exports = {
     rpcUrl: process.env.RPC_URL,
     chainId: parseInt(process.env.CHAIN_ID),
     factoryAddress: process.env.FACTORY_ADDRESS,
-    startBlock: parseInt(process.env.START_BLOCK),
+    startBlock: parseInt(process.env.START_BLOCK) || 0,
+    confirmations: parseInt(process.env.CONFIRMATIONS) || 0,
+    pollInterval: parseInt(process.env.POLL_INTERVAL) || 5000,
   },
 
   pinata: {
