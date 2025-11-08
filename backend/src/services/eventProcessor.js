@@ -254,21 +254,29 @@ class EventProcessor {
   }
 
   async updateAggregates(campaignAddr) {
-    // Calculate total raised
-    const totalRaisedResult = await this.db.get(
-      `SELECT COALESCE(SUM(CAST(amount AS INTEGER)), 0) as total
-       FROM donations
-       WHERE campaign_addr = ? AND finalized = true`,
+    // Calculate total raised (amounts are stored as strings to avoid overflow)
+    // We'll sum them in JavaScript instead of SQL
+    const donations = await this.db.all(
+      `SELECT amount FROM donations WHERE campaign_addr = ? AND finalized = true`,
       [campaignAddr]
     );
 
+    let totalRaised = 0n; // Use BigInt
+    for (const donation of donations) {
+      totalRaised += BigInt(donation.amount || 0);
+    }
+
     // Calculate total released
-    const totalReleasedResult = await this.db.get(
-      `SELECT COALESCE(SUM(CAST(amount_released AS INTEGER)), 0) as total
-       FROM milestones
+    const milestones = await this.db.all(
+      `SELECT amount_released FROM milestones 
        WHERE campaign_addr = ? AND status = 'Released'`,
       [campaignAddr]
     );
+
+    let totalReleased = 0n; // Use BigInt
+    for (const milestone of milestones) {
+      totalReleased += BigInt(milestone.amount_released || 0);
+    }
 
     // Calculate donor count
     const donorCountResult = await this.db.get(
@@ -284,8 +292,8 @@ class EventProcessor {
        SET total_raised = ?, total_released = ?, donor_count = ?, updated_at = CURRENT_TIMESTAMP
        WHERE campaign_addr = ?`,
       [
-        totalRaisedResult.total.toString(),
-        totalReleasedResult.total.toString(),
+        totalRaised.toString(),
+        totalReleased.toString(),
         donorCountResult.count,
         campaignAddr
       ]

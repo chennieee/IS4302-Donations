@@ -4,6 +4,7 @@ const cors = require('cors');
 
 const CampaignController = require('./src/controllers/campaignController');
 const UserController = require('./src/controllers/userController');
+const Indexer = require('./src/services/indexer');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -22,12 +23,18 @@ app.use((req, res, next) => {
 // Initialize database and controllers
 const campaignController = new CampaignController();
 const userController = new UserController();
+const indexer = new Indexer();
 
-// Initialize DB tables on startup
+// Initialize DB tables and start indexer on startup
 (async () => {
   await campaignController.initialize();
   await userController.initialize();
   console.log('✓ database and controllers initialized');
+
+  // Start blockchain indexer
+  await indexer.initialize();
+  await indexer.start();
+  console.log('✓ blockchain indexer started');
 })();
 
 // Routes

@@ -390,7 +390,12 @@ class CampaignController {
       image: Joi.string().optional().allow(null, ''),
       organizer: Joi.string().pattern(/^0x[a-fA-F0-9]{40}$/).required(),
       deadline: Joi.number().integer().min(Math.floor(Date.now() / 1000)).required(),
-      milestones: Joi.array().items(Joi.number().positive()).min(1).max(10).required()
+      milestones: Joi.array().items(
+        Joi.alternatives().try(
+          Joi.number().positive(),
+          Joi.string().pattern(/^[0-9]+$/)
+        )
+      ).min(1).max(10).required()
     });
     return schema.validate(data);
   }
