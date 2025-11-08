@@ -76,7 +76,7 @@ class UserController {
       )
 
       // fetch updated row
-      const savedUser = this.db.get(
+      const savedUser = await this.db.get(
             `SELECT wallet_addr, username, avatar_url, created_at, updated_at
             FROM users
             WHERE wallet_addr = ?`,

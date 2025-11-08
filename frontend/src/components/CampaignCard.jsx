@@ -1,8 +1,11 @@
 // Campaign card to show details of Campaign
-
 import { Link } from 'react-router-dom'
+import { useAccount } from 'wagmi'
 
 export default function CampaignCard({ c }) {
+    const { address } = useAccount()
+    const isMine = address && c?.organizer && address.toLowerCase() === c.organizer.toLowerCase()
+
     // Calculate target from milestones (highest milestone)
     const target = c?.milestones && c.milestones.length > 0
         ? Math.max(...c.milestones.map(m => typeof m === 'number' ? m : parseFloat(m) || 0))
@@ -53,8 +56,9 @@ export default function CampaignCard({ c }) {
             </div>
 
             <div className="pt-1 flex gap-2">
-            <Link to={`/campaign/${c.address}`} className="flex-1 text-center bg-gray-200 text-gray-900 font-medium py-2 rounded-xl transition-colors shadow-sm hover:bg-gray-300">View</Link>
-            <Link to={`/campaign/${c.address}/donate`} className="flex-1 text-center bg-gray-200 text-gray-900 font-medium py-2 rounded-xl transition-colors shadow-sm hover:bg-gray-300">Donate</Link>
+                <Link to={`/campaign/${c.address}`} className="flex-1 text-center bg-gray-200 text-gray-900 font-medium py-2 rounded-xl transition-colors shadow-sm hover:bg-gray-300">View</Link>
+                {isMine ? (<div className="px-3 py-2 rounded-full bg-green-100 text-green-700 font-semibold text-sm inline-flex items-center justify-center select-none">My campaign</div>)
+                        : (<Link to={`/campaign/${c.address}/donate`} className="flex-1 text-center bg-gray-200 text-gray-900 font-medium py-2 rounded-xl transition-colors shadow-sm hover:bg-gray-300">Donate</Link>)}
             </div>
         </div>
         </div>

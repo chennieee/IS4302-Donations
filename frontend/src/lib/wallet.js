@@ -2,9 +2,12 @@ import { createAppKit } from '@reown/appkit/react'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { WagmiProvider } from 'wagmi'
 
+const CHAIN_ID = Number(import.meta.env.VITE_CHAIN_ID ?? 31337)
+const RPC_URL = import.meta.env.VITE_RPC_URL ?? 'http://127.0.0.1:8545'
+
 // Local Hardhat network
 const localhostChain = {
-  id: 31337,
+  id: CHAIN_ID,
   name: 'Hardhat Local',
   nativeCurrency: {
     name: 'Ether',
@@ -12,8 +15,8 @@ const localhostChain = {
     decimals: 18
   },
   rpcUrls: {
-    default: { http: ['http://127.0.0.1:8545'] },
-    public: { http: ['http://127.0.0.1:8545'] }
+    default: { http: [RPC_URL] },
+    public: { http: [RPC_URL] }
   }
 }
 
