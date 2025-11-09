@@ -19,6 +19,7 @@ contract CampaignVoters is ReentrancyGuard {
     uint256 public totalRaised = 0;
 
     // Proposal voting state
+    uint256 public newRequestedDays;
     uint256 public currentProposal; // milestone (in units)
     uint256 public proposalStartTime;
     uint256 public proposalDeadline; // start + 1 days
@@ -36,6 +37,8 @@ contract CampaignVoters is ReentrancyGuard {
     event MilestoneRejected(uint256 milestone);
     event FundsReleased(uint256 amount, uint256 milestoneIndex);
     event FundsReturned(address indexed donor, uint256 amount);
+    event DeadlineAccepted(uint256 newDeadline);
+    event ProposalDeadline(uint256 newDays);
 
     constructor(
         address _owner,
@@ -98,7 +101,7 @@ contract CampaignVoters is ReentrancyGuard {
     modifier validNewMilestone(uint256 milestone) {
         uint256 len = milestones.length;
         require(
-            len == 0 ||
+            (len == 0 && milestone > 1)||
                 (milestone > milestones[len - 1] &&
                     milestones[len - 1] >= totalRaised),
             "New milestone should be greater than current milestone!"
@@ -149,8 +152,27 @@ contract CampaignVoters is ReentrancyGuard {
         emit ProposalStarted(newMilestone, proposalStartTime, proposalDeadline, verifierList.length);
     }
 
+    function proposeNewDeadline(uint256 _newRequestedDays) external onlyOwner {
+        require(_newRequestedDays >= 2, "At least 2 or more days are needed!");
+        require(currentProposal == 0, "Wait for current proposal to complete!");
+        currentProposal = 1;
+        proposalStartTime = block.timestamp;
+        proposalDeadline = block.timestamp + 1 days;
+        newRequestedDays = _newRequestedDays;
+
+        emit ProposalStarted(1, proposalStartTime, proposalDeadline, verifierList.length);
+        emit ProposalDeadline(newRequestedDays);
+    }
+
+
+
     function getCurrentProposal() public view hasProposal returns(uint256[6] memory) {
         return [currentProposal, proposalStartTime, proposalDeadline, yesVotes, noVotes, verifierList.length];
+    }
+
+    function getNewDeadline() public view hasProposal returns(uint256) {
+        require(currentProposal == 1, "The current proposal is not a deadline extension");
+        return newRequestedDays;
     }
 
     // Verifiers vote within the 1-day window. Majority immediately finalizes.
@@ -182,9 +204,14 @@ contract CampaignVoters is ReentrancyGuard {
     }
 
     function acceptProposal() internal {
-        uint256 acceptedMilestone = currentProposal;
-        addMilestone(currentProposal);
-        emit MilestoneAccepted(acceptedMilestone);
+        if(currentProposal == 1) {
+            deadline += newRequestedDays* 1 days;
+            emit DeadlineAccepted(deadline);
+        } else {
+            uint256 acceptedMilestone = currentProposal;
+            addMilestone(currentProposal);
+            emit MilestoneAccepted(acceptedMilestone);
+        }
         clearProposal();
     }
 
@@ -201,6 +228,7 @@ contract CampaignVoters is ReentrancyGuard {
             votedThisProposal[v] = false;
         }
         currentProposal = 0;
+        newRequestedDays = 0;
         proposalStartTime = 0;
         proposalDeadline = 0;
         yesVotes = 0;
@@ -209,6 +237,7 @@ contract CampaignVoters is ReentrancyGuard {
 
     function releaseFunds() external onlyVerifier campaignEnded nonReentrant {
         payable(owner).transfer(totalRaised * 1 ether);
+        totalRaised = 0;
         emit FundsReleased(totalRaised, milestones.length);
     }
 
