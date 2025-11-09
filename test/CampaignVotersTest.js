@@ -283,4 +283,79 @@ describe("CampaignVotersFactory", function () {
     await expect(campaign4.getCurrentProposal()).to.be.revertedWith("No proposal in progress!");
     await expect(campaign4.milestones(1)).to.be.reverted;
   });
+
+  it("15. CampaignVoters: deadline extension accepted updates deadline and emits", async () => {
+    // Create a campaign with 3 verifiers total (owner is auto-added)
+    const tx = await votersFactory.create(
+      "Voters Deadline Accept",
+      [verifier.address, verifier2.address],
+      3,
+      [10]
+    );
+    await tx.wait();
+    const count = await votersFactory.campaignsCount();
+    const idx = count - 1n;
+    const addr = await votersFactory.getCampaign(idx);
+    const cmp = await ethers.getContractAt("CampaignVoters", addr);
+
+    const before = await cmp.deadline();
+    const requestedDays = 5n;
+
+    // Propose extension and verify proposal shape
+    const ptx = await cmp.connect(owner).proposeNewDeadline(requestedDays);
+    await ptx.wait();
+    const info = await cmp.getCurrentProposal();
+    expect(info[0]).to.equal(1n); // sentinel for deadline proposal
+    const proposedDays = await cmp.getNewDeadline();
+    expect(proposedDays).to.equal(requestedDays);
+
+    // Votes: verifier + verifier2 + owner (finalizes)
+    await (await cmp.connect(verifier).voteOnProposal(true)).wait();
+    await (await cmp.connect(verifier2).voteOnProposal(true)).wait();
+
+    const expectedNewDeadline = before + requestedDays * 24n * 3600n;
+    const lastVoteTx = await cmp.connect(owner).voteOnProposal(true);
+    await expect(lastVoteTx)
+      .to.emit(cmp, "DeadlineAccepted")
+      .withArgs(expectedNewDeadline);
+
+    await expect(cmp.getCurrentProposal()).to.be.revertedWith("No proposal in progress!");
+    await expect(cmp.getNewDeadline()).to.be.revertedWith("No proposal in progress!");
+
+    const after = await cmp.deadline();
+    expect(after).to.equal(expectedNewDeadline);
+  });
+
+  it("16. CampaignVoters: deadline extension rejected leaves deadline unchanged", async () => {
+    const tx = await votersFactory.create(
+      "Voters Deadline Reject",
+      [verifier.address, verifier2.address],
+      3,
+      [10]
+    );
+    await tx.wait();
+    const count = await votersFactory.campaignsCount();
+    const idx = count - 1n;
+    const addr = await votersFactory.getCampaign(idx);
+    const cmp = await ethers.getContractAt("CampaignVoters", addr);
+
+    const before = await cmp.deadline();
+    const requestedDays = 7n;
+
+    const ptx = await cmp.connect(owner).proposeNewDeadline(requestedDays);
+    await ptx.wait();
+    const info = await cmp.getCurrentProposal();
+    expect(info[0]).to.equal(1n);
+    const proposedDays = await cmp.getNewDeadline();
+    expect(proposedDays).to.equal(requestedDays);
+
+    // Cast majority NO
+    await (await cmp.connect(verifier).voteOnProposal(false)).wait();
+    await (await cmp.connect(verifier2).voteOnProposal(false)).wait();
+    await (await cmp.connect(owner).voteOnProposal(false)).wait();
+
+    await expect(cmp.getCurrentProposal()).to.be.revertedWith("No proposal in progress!");
+    const after = await cmp.deadline();
+    expect(after).to.equal(before);
+  });
 });
