@@ -92,8 +92,8 @@ export default function CreateCampaign({ onDone, showTitle = true }) {
     try {
       // Parse overall goal
       const overallGoal = parseAmount(formData.overallGoal)
-      if (overallGoal <= 0) {
-        setError('Overall goal must be greater than 0 ETH')
+      if (overallGoal < 1) {
+        setError('Overall goal must be at least 1 ETH')
         setIsSubmitting(false)
         return
       }

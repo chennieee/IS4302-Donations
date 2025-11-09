@@ -264,7 +264,8 @@ export default function Campaign() {
                   <div className="activity-avatar">
                     {donorAvatar ? (
                       <img
-                        src={donorAvatar}alt={donorName || 'Donor Avatar'}
+                        src={donorAvatar}
+                        alt={donorName || 'Donor Avatar'}
                         style={{ width: 20, height: 20, borderRadius: '9999px', objectFit: 'cover', }}
                       />
                     ) : (
@@ -274,7 +275,7 @@ export default function Campaign() {
                     )}
                   </div>
                   <div className="activity-info">
-                    <div className="activity-donor">{donation.donor}</div>
+                    <div className="activity-donor">{donorName}</div>
                     <div className="activity-amount">{donation.amount}</div>
                   </div>
                 </div>

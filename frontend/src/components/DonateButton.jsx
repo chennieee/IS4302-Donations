@@ -49,7 +49,7 @@ export default function DonateButton({
       }
 
       // Validate donation amount
-      if (!amountEth || isNaN(amountEth) || Number(amountEth) <= 0) {
+      if (!amountEth || isNaN(amountEth) || Number(amountEth) < 1) {
         alert('Please enter a valid donation amount')
         return
       }
