@@ -7,6 +7,8 @@ export default function Campaign() {
   const [c, setC] = useState(null)
   const [err, setErr] = useState('')
   const [donations, setDonations] = useState([])
+  const [creator, setCreator] = useState(null)
+  const [donorProfiles, setDonorProfiles] = useState({})
 
   // Helper to convert amount to number
   // Backend now stores amounts in ETH units (not wei)
@@ -15,11 +17,36 @@ export default function Campaign() {
     return parseFloat(amountStr) || 0
   }
 
+  // Format UNIX timestamp (seconds) into a readable date
+  const formatDate = (timestamp) => {
+    if (!timestamp) return ''
+    const tsNum = Number(timestamp)
+    if (!Number.isFinite(tsNum)) return ''
+    const d = new Date(tsNum * 1000)
+    if (Number.isNaN(d.getTime())) return ''
+    return d.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
   useEffect(() => {
-    (async () => {
+    ;(async () => {
       try {
         const res = await api.getCampaign(address)
         setC(res)
+
+        // Load creator profile
+        if (res.organizer) {
+          try {
+            const user = await api.getUser(res.organizer.toLowerCase())
+            setCreator(user)
+          } catch (e) {
+            console.error('Failed to load creator profile', e)
+          }
+        }
+
         // Use real recent activity from API
         if (res.recentActivity && res.recentActivity.length > 0) {
           const donationEvents = res.recentActivity
@@ -33,6 +60,41 @@ export default function Campaign() {
       } catch (e) { setErr(e.message) }
     })()
   }, [address])
+
+  // Load donor profiles for recent activity
+  useEffect(() => {
+    if (!donations.length) return;
+    (async () => {
+      try {
+        const addresses = Array.from(
+          new Set(
+            donations
+              .map(d => d.donor)
+              .filter(addr => typeof addr === 'string' && /^0x[a-fA-F0-9]{40}$/.test(addr))
+              .map(addr => addr.toLowerCase())
+          )
+        )
+
+        if (!addresses.length) return
+
+        const results = {}
+        await Promise.all(
+          addresses.map(async (addr) => {
+            try {
+              const user = await api.getUser(addr)
+              results[addr] = user
+            } catch (e) {
+              console.error('Failed to load donor profile', addr, e)
+            }
+          })
+        )
+        setDonorProfiles(results)
+      } catch (e) {
+        console.error('Failed to load donor profiles', e)
+      }
+    })()
+  }, [donations])
+
 
   // Calculate donation progress
   const donationStats = useMemo(() => {
@@ -91,11 +153,19 @@ export default function Campaign() {
         {/* Creator Info */}
         <div className="campaign-creator">
           <div className="creator-avatar">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-            </svg>
+            {creator?.avatar_url ? (
+              <img 
+                src={creator.avatar_url}
+                alt={creator.username || c.organizer || 'Creator avatar'}
+                style={{ width: 24, height: 24, borderRadius: '9999px', objectFit: 'cover' }}
+              />
+            ) : (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
+            )}
           </div>
-          <span className="creator-name">Created by {c.organizer || 'Unknown'}</span>
+          <span className="creator-name">Created by {creator?.username || c.organizer || 'Unknown'}</span>
         </div>
 
         {/* Campaign Description */}
@@ -108,9 +178,6 @@ export default function Campaign() {
           <Link to={`/campaign/${address}/donate`} className="campaign-btn campaign-btn-donate">
             Donate
           </Link>
-          {/*<button className="campaign-btn campaign-btn-share">
-            Share
-          </button>*/}
         </div>
       </div>
 
@@ -152,6 +219,12 @@ export default function Campaign() {
             <div className="amount-goal">{donationStats.goal.toFixed(2)} ETH Goal</div>
           </div>
 
+          {c.deadline && (
+            <div className="campaign-deadline">
+              Deadline: {formatDate(c.deadline)}
+            </div>
+          )}
+
           <div className="donor-count">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="donor-icon">
               <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
@@ -180,19 +253,33 @@ export default function Campaign() {
         <div className="recent-activity">
           <h3 className="activity-title">Recent Activity</h3>
           <div className="activity-list">
-            {donations.map((donation, idx) => (
-              <div key={idx} className="activity-item">
-                <div className="activity-avatar">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
+            {donations.map((donation, idx) => {
+              const donorAddr = typeof donation.donor === 'string' ? donation.donor.toLowerCase() : ''
+              const donorProfile = donorAddr ? donorProfiles[donorAddr] : null
+              const donorName = donorProfile?.username || donation.donor
+              const donorAvatar = donorProfile?.avatar_url
+            
+              return (
+                <div key={idx} className="activity-item">
+                  <div className="activity-avatar">
+                    {donorAvatar ? (
+                      <img
+                        src={donorAvatar}alt={donorName || 'Donor Avatar'}
+                        style={{ width: 20, height: 20, borderRadius: '9999px', objectFit: 'cover', }}
+                      />
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="activity-info">
+                    <div className="activity-donor">{donation.donor}</div>
+                    <div className="activity-amount">{donation.amount}</div>
+                  </div>
                 </div>
-                <div className="activity-info">
-                  <div className="activity-donor">{donation.donor}</div>
-                  <div className="activity-amount">{donation.amount}</div>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>

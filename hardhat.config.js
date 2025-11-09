@@ -6,7 +6,4 @@ module.exports = {
   localhost: {
     url: "http://localhost:8545",
   },
- "cat.chuu.cc": {
-      url: "http://cat.chuu.cc:8545",  // or "http://cat.chuu.cc:8545" if it’s plain HTTP
-  },
 };
