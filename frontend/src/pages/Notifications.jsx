@@ -4,7 +4,7 @@ export default function Notifications() {
   const [items, setItems] = useState([
     {
       id: 'c1',
-      name: "Fund My Sanity: A Blockchain Professor's Survival Campaign",
+      name: "Fund My Sanity Please",
       newDeadline: '15 Dec 2025',
       reason: 'Need more time to raise funds for therapy... Teaching blockchain is traumatic',
     },
