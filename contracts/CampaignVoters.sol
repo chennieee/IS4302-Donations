@@ -23,6 +23,7 @@ contract CampaignVoters is ReentrancyGuard {
     uint256 public currentProposal; // milestone (in units)
     uint256 public proposalStartTime;
     uint256 public proposalDeadline; // start + 1 days
+    uint256 public constant proposalWindow = 1 days;
     uint256 public yesVotes;
     uint256 public noVotes;
     mapping(address => bool) public votedThisProposal;
@@ -31,7 +32,12 @@ contract CampaignVoters is ReentrancyGuard {
     event DonationReceived(address indexed donor, uint256 amount);
     event MilestoneAdded(uint256 milestone, uint256 index);
     event MilestoneProposed(uint256 milestone);
-    event ProposalStarted(uint256 milestone, uint256 startTime, uint256 endTime, uint256 voterCount);
+    event ProposalStarted(
+        uint256 milestone,
+        uint256 startTime,
+        uint256 endTime,
+        uint256 voterCount
+    );
     event VoteCast(address indexed voter, bool support);
     event MilestoneAccepted(uint256 milestone);
     event MilestoneRejected(uint256 milestone);
@@ -101,7 +107,7 @@ contract CampaignVoters is ReentrancyGuard {
     modifier validNewMilestone(uint256 milestone) {
         uint256 len = milestones.length;
         require(
-            (len == 0 && milestone > 1)||
+            (len == 0 && milestone > 1) ||
                 (milestone > milestones[len - 1] &&
                     milestones[len - 1] >= totalRaised),
             "New milestone should be greater than current milestone!"
@@ -114,7 +120,7 @@ contract CampaignVoters is ReentrancyGuard {
         _;
     }
 
-    modifier noProposal() {
+    modifier hasNoProposal() {
         require(currentProposal == 0, "Wait for current proposal to complete!");
         _;
     }
@@ -122,7 +128,10 @@ contract CampaignVoters is ReentrancyGuard {
     // Only accept denominations of 1 eth for now
     function donate() external payable nonReentrant campaignInProgress {
         require(msg.value >= 1 ether, "Donations have to be at least 1 eth!");
-        require(msg.value % 1 ether == 0, "Donations must be whole ETH multiples");
+        require(
+            msg.value % 1 ether == 0,
+            "Donations must be whole ETH multiples"
+        );
         uint256 ethAmount = msg.value / 1 ether;
         if (contributions[msg.sender] == 0) {
             contributors.push(msg.sender);
@@ -139,44 +148,72 @@ contract CampaignVoters is ReentrancyGuard {
         emit MilestoneAdded(newMilestone, milestones.length - 1);
     }
 
+    function startProposal(uint256 proposalValue) internal {
+        currentProposal = proposalValue;
+        proposalStartTime = block.timestamp;
+        proposalDeadline = block.timestamp + proposalWindow;
+
+        emit ProposalStarted(
+            proposalValue,
+            proposalStartTime,
+            proposalDeadline,
+            verifierList.length
+        );
+    }
+
     // Owner proposes a new milestone; start 1-day voting among verifiers
     function proposeNewMilestone(
         uint256 newMilestone
-    ) external onlyOwner validNewMilestone(newMilestone) {
-        require(currentProposal == 0, "Wait for current proposal to complete!");
-        currentProposal = newMilestone;
-        proposalStartTime = block.timestamp;
-        proposalDeadline = block.timestamp + 1 days;
+    ) external onlyOwner validNewMilestone(newMilestone) hasNoProposal {
+        startProposal(newMilestone);
 
         emit MilestoneProposed(newMilestone);
-        emit ProposalStarted(newMilestone, proposalStartTime, proposalDeadline, verifierList.length);
+        emit ProposalStarted(
+            newMilestone,
+            proposalStartTime,
+            proposalDeadline,
+            verifierList.length
+        );
     }
 
-    function proposeNewDeadline(uint256 _newRequestedDays) external onlyOwner {
+    function proposeNewDeadline(
+        uint256 _newRequestedDays
+    ) external onlyOwner hasNoProposal {
         require(_newRequestedDays >= 2, "At least 2 or more days are needed!");
-        require(currentProposal == 0, "Wait for current proposal to complete!");
-        currentProposal = 1;
-        proposalStartTime = block.timestamp;
-        proposalDeadline = block.timestamp + 1 days;
+        startProposal(1); // currentProposal is set to 1 for deadlines
         newRequestedDays = _newRequestedDays;
 
-        emit ProposalStarted(1, proposalStartTime, proposalDeadline, verifierList.length);
         emit ProposalDeadline(newRequestedDays);
     }
 
-
-
-    function getCurrentProposal() public view hasProposal returns(uint256[6] memory) {
-        return [currentProposal, proposalStartTime, proposalDeadline, yesVotes, noVotes, verifierList.length];
+    function getCurrentProposal()
+        public
+        view
+        hasProposal
+        returns (uint256[6] memory)
+    {
+        return [
+            currentProposal,
+            proposalStartTime,
+            proposalDeadline,
+            yesVotes,
+            noVotes,
+            verifierList.length
+        ];
     }
 
-    function getNewDeadline() public view hasProposal returns(uint256) {
-        require(currentProposal == 1, "The current proposal is not a deadline extension");
+    function getNewDeadline() public view hasProposal returns (uint256) {
+        require(
+            currentProposal == 1,
+            "The current proposal is not a deadline extension"
+        );
         return newRequestedDays;
     }
 
     // Verifiers vote within the 1-day window. Majority immediately finalizes.
-    function voteOnProposal(bool support) external onlyVerifier hasProposal returns(string memory){
+    function voteOnProposal(
+        bool support
+    ) external onlyVerifier hasProposal returns (string memory) {
         require(!votedThisProposal[msg.sender], "Already voted");
         require(block.timestamp <= proposalDeadline, "Voting ended");
 
@@ -190,22 +227,30 @@ contract CampaignVoters is ReentrancyGuard {
         return checkFinalize();
     }
 
-    function checkFinalize() public onlyVerifier hasProposal returns(string memory) {
-        if ((yesVotes + noVotes == verifierList.length) || block.timestamp > proposalDeadline) {
+    function checkFinalize()
+        public
+        onlyVerifier
+        hasProposal
+        returns (string memory)
+    {
+        if (
+            (yesVotes + noVotes == verifierList.length) ||
+            block.timestamp > proposalDeadline
+        ) {
             if (yesVotes > noVotes) {
                 acceptProposal();
                 return "Proposal has been accepted!";
             } else {
                 rejectProposal();
                 return "Proposal has been rejected!";
-            }        
+            }
         }
         return "Proposal is not finalized yet";
     }
 
     function acceptProposal() internal {
-        if(currentProposal == 1) {
-            deadline += newRequestedDays* 1 days;
+        if (currentProposal == 1) {
+            deadline += newRequestedDays * 1 days;
             emit DeadlineAccepted(deadline);
         } else {
             uint256 acceptedMilestone = currentProposal;
@@ -280,7 +325,7 @@ contract CampaignVoters is ReentrancyGuard {
         return contributors;
     }
 
-    function isVerifier(address newVerifier) public view returns (bool){
+    function isVerifier(address newVerifier) public view returns (bool) {
         return verifiers[newVerifier];
     }
 
@@ -289,18 +334,20 @@ contract CampaignVoters is ReentrancyGuard {
     }
 
     // Admin for verifiers
-    function addVerifier(address newVerifier) noProposal onlyOwner public {
+    function addVerifier(address newVerifier) public hasNoProposal onlyOwner {
         require(!isVerifier(newVerifier), "Address is already a verifier");
         verifiers[newVerifier] = true;
         verifierList.push(newVerifier);
     }
 
-    function removeVerifier(address newVerifier) noProposal onlyOwner public {
+    function removeVerifier(
+        address newVerifier
+    ) public hasNoProposal onlyOwner {
         require(isVerifier(newVerifier), "Address is already not a verifier");
         verifiers[newVerifier] = false;
         uint256 tempNum = 0;
-        while(verifierList[tempNum] != newVerifier){
-                tempNum += 1;
+        while (verifierList[tempNum] != newVerifier) {
+            tempNum += 1;
         }
         verifierList[tempNum] = verifierList[verifierList.length - 1];
         verifierList.pop();

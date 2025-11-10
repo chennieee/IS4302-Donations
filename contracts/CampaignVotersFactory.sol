@@ -25,7 +25,7 @@ contract CampaignVotersFactory {
             timeDays > 0,
             "Input a valid number of days for this campaign to last"
         );
-        uint256 deadline = block.timestamp + (timeDays * 24 * 3600);
+        uint256 deadline = block.timestamp + timeDays * 1 days;
         CampaignVoters newCampaign = new CampaignVoters(
             msg.sender,
             verifiers,
@@ -60,4 +60,3 @@ contract CampaignVotersFactory {
         return allCampaigns[index];
     }
 }
-
