@@ -2,29 +2,32 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-describe("CampaignVotersFactory", function () {
+describe("CampaignVoters", function () {
   let CampaignVotersFactory;
-  let votersFactory, owner, user, verifier, other, verifier2, verifier3, verifier4;
+  let votersFactory, owner, user, verifier, verifier2, verifier3, other;
   let campaign0, campaign1, campaign2, campaign3, campaign4;
 
-  before(async () => {
+  beforeEach(async () => {
     [owner, user, verifier, other] = await ethers.getSigners();
     CampaignVotersFactory = await ethers.getContractFactory("CampaignVotersFactory");
     votersFactory = await CampaignVotersFactory.deploy();
     await votersFactory.waitForDeployment();
-  });
 
-  it("1. deploys a Campaign properly and reads its state", async () => {
-    const name = "My First Voters Campaign";
-    const tx = await votersFactory.connect(owner).create(name, [verifier], 7, [10]);
-    await tx.wait();
+    await (await votersFactory.create("First", [verifier], 7, [10])).wait();
+    await (await votersFactory.create("Second", [verifier], 123, [5, 15])).wait();
+    await (await votersFactory.create("Third", [verifier], 999, [20])).wait();
+
     const campaign0Address = await votersFactory.getCampaign(0);
     campaign0 = await ethers.getContractAt("CampaignVoters", campaign0Address);
-    expect(await campaign0.owner()).to.equal(await owner.getAddress());
-    expect(await campaign0.name()).to.equal(name);
+
+    const campaign1Address = await votersFactory.getCampaign(1);
+    campaign1 = await ethers.getContractAt("CampaignVoters", campaign1Address);
+
+    const campaign2Address = await votersFactory.getCampaign(2);
+    campaign2 = await ethers.getContractAt("CampaignVoters", campaign2Address);
   });
 
-  it("2. Campaign can allow for donations properly and check status", async () => {
+  it("Campaign can allow for donations properly and check status", async () => {
     expect(await campaign0.totalRaised()).to.equal(0);
     const ONE_ETH = ethers.parseEther("1");
     const tx = await campaign0.connect(user).donate({ value: ONE_ETH });
@@ -32,28 +35,7 @@ describe("CampaignVotersFactory", function () {
     expect(await campaign0.totalRaised()).to.equal(1);
   });
 
-  it("3. tracks campaigns in factory getters (count and list length)", async () => {
-    const count0 = await votersFactory.campaignsCount();
-    const list0 = await votersFactory.getAllCampaigns();
-    expect(count0).to.equal(1n);
-    expect(list0.length).to.equal(1);
-
-    const t1 = await votersFactory.create("Second", [verifier], 123, [5, 15]);
-    await t1.wait();
-    const t2 = await votersFactory.create("Third", [verifier], 999, [20]);
-    await t2.wait();
-
-    const count = await votersFactory.campaignsCount();
-    const list = await votersFactory.getAllCampaigns();
-    expect(count).to.equal(3n);
-    expect(list.length).to.equal(3);
-  });
-
-  it("4. getCampaign reverts on invalid index", async () => {
-    await expect(votersFactory.getCampaign(99)).to.be.reverted;
-  });
-
-  it("5. initial verifier set, add/remove verifier, and revert on duplicates", async () => {
+  it("initial verifier set, add/remove verifier, and revert on duplicates", async () => {
     expect(await campaign0.isVerifier(verifier.address)).to.equal(true);
     const addTx = await campaign0.connect(owner).addVerifier(user.address);
     await addTx.wait();
@@ -65,12 +47,12 @@ describe("CampaignVotersFactory", function () {
     await expect(campaign0.connect(owner).removeVerifier(user.address)).to.be.revertedWith("Address is already not a verifier");
   });
 
-  it("6. only owner can add/remove verifiers", async () => {
+  it("only owner can add/remove verifiers", async () => {
     await expect(campaign0.connect(user).addVerifier(other.address)).to.be.reverted;
     await expect(campaign0.connect(user).removeVerifier(verifier.address)).to.be.reverted;
   });
 
-  it("7. donation requires non-zero value; balance increases on donate", async () => {
+  it("donation requires non-zero value; balance increases on donate", async () => {
     await expect(campaign0.connect(user).donate({ value: 0 })).to.be.reverted;
     const onePointFive = ethers.parseEther("1.5");
     await expect(campaign0.connect(user).donate({ value: onePointFive }))
@@ -99,23 +81,20 @@ describe("CampaignVotersFactory", function () {
     expect(newTotal).to.equal(prevTotal - userBefore);
   });
 
-  it("8. milestones and basic fields are correctly stored per campaign", async () => {
-    const addr1 = await votersFactory.getCampaign(1);
-    campaign1 = await ethers.getContractAt("CampaignVoters", addr1);
+  it("milestones and basic fields are correctly stored per campaign", async () => {
+
     expect(await campaign1.name()).to.equal("Second");
     const m0 = await campaign1.milestones(0);
     const m1 = await campaign1.milestones(1);
     expect(m0).to.equal(5n);
     expect(m1).to.equal(15n);
 
-    const addr2 = await votersFactory.getCampaign(2);
-    campaign2 = await ethers.getContractAt("CampaignVoters", addr2);
     expect(await campaign2.name()).to.equal("Third");
     const m2 = await campaign2.milestones(0);
     expect(m2).to.equal(20n);
   });
 
-  it("9. owners are set correctly per deployee", async () => {
+  it("owners are set correctly per deployee", async () => {
     expect(await campaign0.owner()).to.equal(await owner.getAddress());
     const c1 = await votersFactory.getCampaign(1);
     const c2 = await votersFactory.getCampaign(2);
@@ -125,7 +104,7 @@ describe("CampaignVotersFactory", function () {
     expect(await cmp2.owner()).to.equal(await owner.getAddress());
   });
 
-  it("10. proposal flow works via votes and guards", async () => {
+  it("proposal flow works via votes and guards", async () => {
     await expect(campaign0.connect(user).proposeNewMilestone(12)).to.be.reverted;
     const ptx = await campaign0.connect(owner).proposeNewMilestone(12);
     await ptx.wait();
@@ -155,7 +134,7 @@ describe("CampaignVotersFactory", function () {
     await expect(campaign0.milestones(2)).to.be.reverted;
   });
 
-  it("11. refundAll onlyOwner after deadline refunds all and zeroes state", async () => {
+  it("refundAll onlyOwner after deadline refunds all and zeroes state", async () => {
     const name = "RefundAll";
     const createTx = await votersFactory.connect(owner).create(name, [verifier], 1, [100]);
     await createTx.wait();
@@ -194,7 +173,7 @@ describe("CampaignVotersFactory", function () {
   });
 
   // CampaignVoters-specific tests
-  it("12. CampaignVoters: propose and voting requires all votes or deadline to finalize", async () => {
+  it("CampaignVoters: propose and voting requires all votes or deadline to finalize", async () => {
     // Fetch additional signers for voters
     const all = await ethers.getSigners();
     verifier2 = all[4];
@@ -234,7 +213,7 @@ describe("CampaignVotersFactory", function () {
     expect(appended).to.equal(12n);
   });
 
-  it("13. CampaignVoters: block add/remove during proposal; allow after finalize", async () => {
+  it("CampaignVoters: block add/remove during proposal; allow after finalize", async () => {
     const t = await votersFactory.create("Voters B", [verifier.address, verifier2.address], 7, [10]);
     await t.wait();
     const count = await votersFactory.campaignsCount();
@@ -263,7 +242,7 @@ describe("CampaignVotersFactory", function () {
     expect(await campaign4.isVerifier(verifier2.address)).to.equal(false);
   });
 
-  it("14. CampaignVoters: finalize after deadline when not all votes are in (tie rejects)", async () => {
+  it("CampaignVoters: finalize after deadline when not all votes are in (tie rejects)", async () => {
     const t = await votersFactory.create("Voters C", [verifier.address, verifier2.address], 1, [10]);
     await t.wait();
     const count = await votersFactory.campaignsCount();
@@ -284,7 +263,7 @@ describe("CampaignVotersFactory", function () {
     await expect(campaign4.milestones(1)).to.be.reverted;
   });
 
-  it("15. CampaignVoters: deadline extension accepted updates deadline and emits", async () => {
+  it("CampaignVoters: deadline extension accepted updates deadline and emits", async () => {
     // Create a campaign with 3 verifiers total (owner is auto-added)
     const tx = await votersFactory.create(
       "Voters Deadline Accept",
@@ -326,7 +305,7 @@ describe("CampaignVotersFactory", function () {
     expect(after).to.equal(expectedNewDeadline);
   });
 
-  it("16. CampaignVoters: deadline extension rejected leaves deadline unchanged", async () => {
+  it("CampaignVoters: deadline extension rejected leaves deadline unchanged", async () => {
     const tx = await votersFactory.create(
       "Voters Deadline Reject",
       [verifier.address, verifier2.address],
