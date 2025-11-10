@@ -3,6 +3,7 @@ import Landing from './pages/Landing'
 import AllCampaigns from './pages/AllCampaigns'
 import Campaign from './pages/Campaign'
 import Donate from './pages/Donate'
+import MyDonations from "./pages/MyDonations.jsx";
 import MyProfile from './pages/MyProfile'
 import MyCampaigns from './pages/MyCampaigns'
 import Notifications from './pages/Notifications'
@@ -41,7 +42,7 @@ export default function App() {
           <Route path="/campaign/:address/donate" element={<Donate />} />
           <Route path="/my-donations" element={
             <SidebarLayout>
-              <div className="placeholder-page">My Donations - Coming Soon</div>
+              <MyDonations />
             </SidebarLayout>
           } />
           <Route path="/my-campaigns" element={
