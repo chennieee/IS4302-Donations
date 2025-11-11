@@ -17,9 +17,6 @@ export default function CreateCampaign({ onDone, showTitle = true }) {
     overallGoal: '',
     deadline: '',
     milestone1: '',
-    milestone1Deadline: '',
-    milestone2: '',
-    milestone2Deadline: ''
   })
   const [imagePreview, setImagePreview] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -49,6 +46,8 @@ export default function CreateCampaign({ onDone, showTitle = true }) {
     }
     return null
   }
+
+
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -93,8 +92,8 @@ export default function CreateCampaign({ onDone, showTitle = true }) {
     try {
       // Parse overall goal
       const overallGoal = parseAmount(formData.overallGoal)
-      if (overallGoal <= 0) {
-        setError('Overall goal must be greater than 0 ETH')
+      if (overallGoal < 1) {
+        setError('Overall goal must be at least 1 ETH')
         setIsSubmitting(false)
         return
       }
@@ -112,50 +111,11 @@ export default function CreateCampaign({ onDone, showTitle = true }) {
           milestones.push(amount)
         }
       }
-      if (formData.milestone2) {
-        const amount = parseAmount(formData.milestone2)
-        if (amount > 0) {
-          if (amount > overallGoal) {
-            setError('Milestone 2 cannot exceed the overall goal')
-            setIsSubmitting(false)
-            return
-          }
-          milestones.push(amount)
-        }
-      }
 
-      // Milestone date validation
+      // Deadline validation
       const deadlineDate = parseDateStrict(formData.deadline)
-      const m1Date = parseDateStrict(formData.milestone1Deadline)
-      const m2Date = parseDateStrict(formData.milestone2Deadline)
-
-      // If milestone amount is set, require its date
-      if (formData.milestone1 && !m1Date) {
-        setError('Please choose a deadline for Milestone 1')
-        setIsSubmitting(false)
-        return
-      }
-      if (formData.milestone2 && !m2Date) {
-        setError('Please choose a deadline for Milestone 2')
-        setIsSubmitting(false)
-        return
-      }
-
-      // Milestones must be on/before campaign deadline
-      if (m1Date && m1Date > deadlineDate) {
-        setError('Milestone 1 deadline cannot be after the overall deadline')
-        setIsSubmitting(false)
-        return
-      }
-      if (m2Date && m2Date > deadlineDate) {
-        setError('Milestone 2 deadline cannot be after the overall deadline')
-        setIsSubmitting(false)
-        return
-      }
-
-      // Milestone 1 must be earlier than or equal to Milestone 2
-      if (m1Date && m2Date && m1Date > m2Date) {
-        setError('Milestone 1 deadline cannot be after Milestone 2 deadline')
+      if (!deadlineDate) {
+        setError("Please choose a valid deadline")
         setIsSubmitting(false)
         return
       }
@@ -165,7 +125,7 @@ export default function CreateCampaign({ onDone, showTitle = true }) {
         milestones.push(overallGoal)
       }
 
-      // Amount validation for cumulative milestones
+      // Milestone 1 amount validation
       if (formData.milestone1) {
         const m1 = parseAmount(formData.milestone1)
         if (m1 <= 0) {
@@ -177,30 +137,6 @@ export default function CreateCampaign({ onDone, showTitle = true }) {
           setIsSubmitting(false); return
         }
       }
-      if (formData.milestone2) {
-        const m2 = parseAmount(formData.milestone2)
-        if (m2 <= 0) {
-          setError('Milestone 2 must be greater than 0')
-          setIsSubmitting(false); return
-        }
-        if (m2 > overallGoal) {
-          setError('Milestone 2 cannot exceed the overall goal')
-          setIsSubmitting(false); return
-        }
-      }
-
-      // Sum of milestone1 and milestone2 should not exceed overall goal
-      if (formData.milestone1 && formData.milestone2) {
-        const m1 = parseAmount(formData.milestone1)
-        const m2 = parseAmount(formData.milestone2)
-        if (m1 + m2 > overallGoal) {
-          setError('Total milestone value cannot exceed the overall goal')
-          setIsSubmitting(false); return
-        }
-      }
-
-      // Sort milestones in ascending order
-      milestones.sort((a, b) => a - b)
 
       // Convert deadline to Unix timestamp
       const deadlineTimestamp = Math.floor(deadlineDate / 1000)
@@ -248,9 +184,6 @@ export default function CreateCampaign({ onDone, showTitle = true }) {
       overallGoal: '',
       deadline: '',
       milestone1: '',
-      milestone1Deadline: '',
-      milestone2: '',
-      milestone2Deadline: ''
     })
     setImagePreview(null)
     // Clear file input
@@ -352,45 +285,6 @@ export default function CreateCampaign({ onDone, showTitle = true }) {
             value={formData.milestone1}
             onChange={(e) => handleChange('milestone1', e.target.value)}
             placeholder="e.g., 100 ETH"
-          />
-        </div>
-
-        {/* Milestone 1 Deadline */}
-        <div className="form-row">
-          <label className="form-label">Milestone 1 deadline:</label>
-          <input
-            type="date"
-            className="form-input"
-            value={formData.milestone1Deadline}
-            onChange={(e) => handleChange('milestone1Deadline', e.target.value)}
-            disabled={!formData.milestone1}
-          />
-        </div>
-
-        {/* Milestone 2 */}
-        <div className="form-row">
-          <label className="form-label">
-            Milestone 2:<br />
-            <span className="form-label-optional">(optional)</span>
-          </label>
-          <input
-            type="text"
-            className="form-input"
-            value={formData.milestone2}
-            onChange={(e) => handleChange('milestone2', e.target.value)}
-            placeholder="e.g., 200 ETH"
-          />
-        </div>
-
-        {/* Milestone 2 Deadline */}
-        <div className="form-row">
-          <label className="form-label">Milestone 2 deadline:</label>
-          <input
-            type="date"
-            className="form-input"
-            value={formData.milestone2Deadline}
-            onChange={(e) => handleChange('milestone2Deadline', e.target.value)}
-            disabled={!formData.milestone2}
           />
         </div>
 

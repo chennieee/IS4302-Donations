@@ -2,6 +2,7 @@
 // Includes: All Campaigns, My Donations, Create a campaign, My Profile navigation items
 
 import { useEffect, useState, useMemo } from 'react'
+import { useAccount } from 'wagmi'
 import { api } from '../lib/api'
 import CampaignCard from '../components/CampaignCard'
 import SidebarLayout from '../components/SidebarLayout'
@@ -10,6 +11,7 @@ export default function AllCampaigns() {
   const [list, setList] = useState([])
   const [status, setStatus] = useState('loading')
   const [errMsg, setErrMsg] = useState('')
+  const { address } = useAccount()
 
   useEffect(() => {
     let alive = true
@@ -28,7 +30,18 @@ export default function AllCampaigns() {
     return () => { alive = false }
   }, [])
 
-  const hasItems = useMemo(() => (list?.length ?? 0) > 0, [list])
+  // Show only campaigns created by others (exclude current user's own campaigns)
+  const filteredList = useMemo(() => {
+    if (!address) return list
+    return (list ?? []).filter(
+      c => c.organizer?.toLowerCase() !== address.toLowerCase()
+    )
+  }, [list, address])
+
+  const hasItems = useMemo(
+    () => (filteredList?.length ?? 0) > 0, 
+    [filteredList]
+  )
 
   return (
     <SidebarLayout>
@@ -55,7 +68,7 @@ export default function AllCampaigns() {
 
         {status === 'ok' && hasItems && (
           <div className="campaigns-grid">
-            {list.map(c => (
+            {filteredList.map(c => (
               <CampaignCard key={c.address} c={c} />
             ))}
           </div>

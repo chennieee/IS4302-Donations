@@ -1,6 +1,3 @@
-// Sidebar Layout - Wrapper component with collapsible navigation
-// Used for pages that need sidebar navigation
-
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
@@ -12,6 +9,7 @@ export default function SidebarLayout({ children }) {
   { path: '/campaigns', label: 'All Campaigns' },
   { path: '/my-donations', label: 'My Donations' },
   { path: '/my-campaigns', label: 'My Campaigns' },
+  { path: '/notifications', label: 'Notifications' }, 
   { path: '/profile', label: 'My Profile' }
   ]
 
