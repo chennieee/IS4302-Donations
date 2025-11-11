@@ -74,8 +74,9 @@ export default function CampaignCard({ c }) {
             {isMine ? (
               // Replaced the green "My campaign" chip with this button
               <button
+                type="button"
                 onClick={() => setOpenProposal(true)}
-                className="flex-1 text-center bg-gray-200 text-gray-900 font-medium py-2 rounded-xl transition-colors shadow-sm hover:bg-gray-300"
+                className="flex-1 text-center bg-gray-200 text-gray-900 font-medium py-2 rounded-xl transition-colors shadow-sm hover:bg-gray-300 appearance-none border border-transparent focus:outline-none"
               >
                 Add proposal
               </button>

@@ -72,15 +72,9 @@ export default function AddProposalModal({ open, onClose }) {
 
               <div className="flex justify-end gap-3 pt-2">
                 <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 rounded-xl bg-gray-200 text-gray-900 font-medium shadow-sm hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-                <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-gray-900 text-white font-medium shadow-sm hover:bg-black"
+                  className="px-4 py-2 rounded-xl font-medium shadow-sm"
+                  style={{ backgroundColor: "#111827", color: "#ffffff" }}
                 >
                   Submit
                 </button>
