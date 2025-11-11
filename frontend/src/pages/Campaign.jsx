@@ -157,7 +157,7 @@ export default function Campaign() {
               <img 
                 src={creator.avatar_url}
                 alt={creator.username || c.organizer || 'Creator avatar'}
-                style={{ width: 24, height: 24, borderRadius: '9999px', objectFit: 'cover' }}
+                style={{ width: '100%', height: '100%', borderRadius: '9999px', objectFit: 'cover', display: 'block' }}
               />
             ) : (
               <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
