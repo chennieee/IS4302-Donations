@@ -18,9 +18,9 @@ function TimelineItem({ title, ago }) {
 
 export default function MyDonations() {
   // ---- hardcoded placeholders ----
-  const campaignX = "Campaign X";
-  const campaignY = "Campaign Y";
-  const campaignZ = "Campaign Z";
+  const campaignX = "Help us rebuild after a home flood";
+  const campaignY = "Help my family recover from a sudden medical emergency";
+  const campaignZ = "Fund my sanity please";
   const refundableAmount = 3; // ETH still refundable because campaignY not yet at Milestone 1
 
   return (
@@ -54,23 +54,23 @@ export default function MyDonations() {
           <div className="space-y-1">
             {/* newest → oldest (examples) */}
             <TimelineItem
-              title={`5 ETH sent from your wallet to ${campaignZ}`}
+              title={<>5 ETH sent from your wallet to <span className="font-semibold">{campaignZ}</span></>}
               ago="0 mins ago"
             />
             <TimelineItem
-              title={`3 ETH sent from your wallet to ${campaignY}`}
+              title={<>3 ETH sent from your wallet to <span className="font-semibold">{campaignY}</span></>}
               ago="3 days ago"
             />
             <TimelineItem
-              title={`4 ETH received by beneficiary (${campaignX})`}
+              title={<>4 ETH received by beneficiary <span className="font-semibold">{campaignX}</span></>}
               ago="9 days ago"
             />
             <TimelineItem
-              title={`4 ETH received by platform (${campaignX})`}
+              title={<>4 ETH received by platform <span className="font-semibold">{campaignX}</span></>}
               ago="11 days ago"
             />
             <TimelineItem
-              title={`4 ETH sent from your wallet to ${campaignX}`}
+              title={<>4 ETH sent from your wallet to <span className="font-semibold">{campaignY}</span></>}
               ago="11 days ago"
             />
           </div>
