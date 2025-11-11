@@ -37,9 +37,9 @@ export default function Notifications() {
               <div className="p-4 space-y-2">
                 <h2 className="font-semibold text-lg">{item.name}</h2>
 
-                <div className="text-sm">
+                <div className="text-sm" style={{ marginTop: 8 }}>
                   <div className="opacity-70">New deadline:</div>
-                  <div className="font-medium">{item.newDeadline}</div>
+                  <div className="font-medium" style={{ marginTop: 6 }}>{item.newDeadline}</div>
                 </div>
 
                 <div className="text-sm">
@@ -47,16 +47,34 @@ export default function Notifications() {
                   <p className="opacity-90">{item.reason}</p>
                 </div>
 
-                <div className="pt-2 flex gap-2">
+                <div className="pt-2 flex gap-3">
                   <button
                     onClick={() => vote(item.id, 'yes')}
-                    className="flex-1 text-center bg-green-600 text-white font-medium py-2 rounded-xl shadow-sm hover:bg-green-700 transition-colors"
+                    style={{
+                      flex: 1,
+                      textAlign: 'center',
+                      backgroundColor: '#10B981',
+                      color: '#fff',
+                      fontWeight: 600,
+                      padding: '0.5rem 0',
+                      borderRadius: 12,
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+                    }}
                   >
                     Yes
                   </button>
                   <button
                     onClick={() => vote(item.id, 'no')}
-                    className="flex-1 text-center bg-red-600 text-white font-medium py-2 rounded-xl shadow-sm hover:bg-red-700 transition-colors"
+                    style={{
+                      flex: 1,
+                      textAlign: 'center',
+                      backgroundColor: '#EF4444',
+                      color: '#fff',
+                      fontWeight: 600,
+                      padding: '0.5rem 0',
+                      borderRadius: 12,
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+                    }}
                   >
                     No
                   </button>
