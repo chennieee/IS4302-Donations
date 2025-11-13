@@ -1,0 +1,80 @@
+﻿@startuml CampaignVoters
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #f5f5f5
+hide empty methods
+hide empty attributes
+
+class ReentrancyGuard <<abstract>> {
+  +nonReentrant()
+}
+
+class CampaignVoters <<contract>> {
+  +address owner
+  +mapping(address => bool) verifiers
+  -address[] verifierList
+  +uint256 deadline
+  +string name
+  +uint256[] milestones
+  -mapping(address => uint256) contributions
+  -address[] contributors
+  +uint256 totalRaised
+  +uint256 newRequestedDays
+  +uint256 currentProposal
+  +uint256 proposalStartTime
+  +uint256 proposalDeadline
+  +constant uint256 proposalWindow = 1 days
+  +uint256 yesVotes
+  +uint256 noVotes
+  +mapping(address => bool) votedThisProposal
+  --
+  +event DonationReceived(address donor, uint256 amount)
+  +event MilestoneAdded(uint256 milestone, uint256 index)
+  +event MilestoneProposed(uint256 milestone)
+  +event ProposalStarted(uint256 milestone, uint256 start, uint256 end, uint256 voterCount)
+  +event VoteCast(address voter, bool support)
+  +event MilestoneAccepted(uint256 milestone)
+  +event MilestoneRejected(uint256 milestone)
+  +event FundsReleased(uint256 amount, uint256 milestoneIndex)
+  +event FundsReturned(address donor, uint256 amount)
+  +event DeadlineAccepted(uint256 newDeadline)
+  +event ProposalDeadline(uint256 newDays)
+  --
+  +constructor(address owner, address[] verifiers, uint256 deadline, string name, uint256[] milestones)
+  +donate() «external payable»
+  +addMilestone(uint256 milestone) «public onlyOwner»
+  #startProposal(uint256 proposalValue)
+  +proposeNewMilestone(uint256 milestone) «public onlyVerifier»
+  +proposeNewDeadline(uint256 extraDays) «public onlyVerifier»
+  +getCurrentProposal() «public view returns(uint256,uint256,uint256,uint256)»
+  +getNewDeadline() «public view returns(uint256)»
+  +voteOnProposal(bool support) «public onlyVerifier»
+  +checkFinalize() «public onlyVerifier»
+  #acceptProposal()
+  #rejectProposal()
+  #clearProposal()
+  +releaseFunds() «external onlyVerifier»
+  +refund() «external»
+  +refundAll() «external onlyOwner»
+  +getContribution(address user) «external view»
+  +getContributors() «external view»
+  +isVerifier(address) «public view»
+  +getVerifiers() «external view»
+  +addVerifier(address) «public onlyOwner»
+  +removeVerifier(address) «public onlyOwner»
+}
+
+CampaignVoters --|> ReentrancyGuard
+
+class CampaignVotersFactory <<contract>> {
+  +address[] allCampaigns
+  --
+  +event CampaignCreated(address organizer, address campaign, string name, uint256 deadline, uint256[] milestones, string campaignType)
+  --
+  +create(string name, address[] verifiers, uint256 timeDays, uint256[] milestones) : address
+  +getAllCampaigns() : address[]
+  +campaignsCount() : uint256
+  +getCampaign(uint256 index) : address
+}
+
+CampaignVotersFactory --> CampaignVoters : create()
+@enduml

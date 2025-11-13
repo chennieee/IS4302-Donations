@@ -1,0 +1,142 @@
+﻿@startuml
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #f5f5f5
+hide empty attributes
+
+package "Express App" {
+  class BackendServer <<express>> {
+    -app: Express
+    -campaignController: CampaignController
+    -userController: UserController
+    -indexer: Indexer
+    +configureMiddleware()
+    +registerRoutes()
+    +start()
+  }
+}
+
+package "Controllers" {
+  class CampaignController <<controller>> {
+    -db: Database
+    +constructor()
+    +initialize()
+    +getCampaigns(req, res)
+    +getCampaign(req, res)
+    +createCampaign(req, res)
+    +getCampaignEvents(req, res)
+    +recordDonation(req, res)
+    -validateCampaignsQuery(query)
+    -validateCreatePayload(body)
+    -validateDonationPayload(body)
+  }
+
+  class UserController <<controller>> {
+    -db: Database
+    +constructor()
+    +initialize()
+    +getUser(req, res)
+    +updateUser(req, res)
+  }
+}
+
+package "Model" {
+  class Database <<sqlite>> {
+    -db: sqlite3.Database
+    +initialize()
+    +createTables()
+    +run(sql, params)
+    +get(sql, params)
+    +all(sql, params)
+    +beginTransaction()
+    +commit()
+    +rollback()
+    +close()
+  }
+}
+
+package "Services" {
+  class BlockchainService <<service>> {
+    -provider: ethers.JsonRpcProvider
+    -factoryAddress: address
+    -chainId: uint256
+    -factoryContract: ethers.Contract
+    +getCurrentBlock()
+    +getLogsInRange(fromBlock, toBlock, addresses)
+    +getFactoryLogs(fromBlock, toBlock)
+    +getCampaignLogs(address, fromBlock, toBlock)
+    +parseFactoryLog(log)
+    +parseCampaignLog(log, address)
+    +getTransaction(txHash)
+    +getTransactionReceipt(txHash)
+    +getCampaignDetails(address)
+    +isVerifier(campaign, verifier)
+  }
+
+  class EventProcessor <<service>> {
+    -db: Database
+    -blockchain: BlockchainService
+    -isProcessing: boolean
+    +initialize()
+    +processEvent(eventLog)
+    +storeEventLog(eventLog)
+    +processCampaignCreated(eventLog)
+    +processDonationReceived(eventLog)
+    +processMilestone*()
+    +processFundsReleased(eventLog)
+    +processFundsReturned(eventLog)
+    +updateAggregates(campaignAddr)
+    +finalizeEvents(blockNumber)
+    +handleReorg(fromBlock)
+    +close()
+  }
+
+  class Indexer <<service>> {
+    -processor: EventProcessor
+    -blockchain: BlockchainService
+    -db: Database
+    -isRunning: boolean
+    -lastProcessedBlock: number
+    -pollInterval: number
+    +initialize()
+    +start()
+    +poll()
+    +indexNewBlocks()
+    +indexFactoryEvents(fromBlock, toBlock)
+    +indexCampaignEvents(addr, fromBlock, toBlock)
+    +indexEthTransfers(addr, fromBlock, toBlock)
+    +stop()
+    +close()
+  }
+}
+
+BackendServer *-- CampaignController
+BackendServer *-- UserController
+BackendServer *-- Indexer
+
+CampaignController *-- Database
+UserController *-- Database
+
+EventProcessor *-- Database
+EventProcessor *-- BlockchainService
+Indexer *-- EventProcessor
+Indexer *-- BlockchainService
+Indexer *-- Database
+
+note right of BackendServer
+  Defined in backend/index.js.
+  Binds Express routes to controllers
+  and boots the blockchain indexer.
+end note
+
+note bottom of EventProcessor
+  Consumes on-chain events and writes
+  normalized state into SQLite tables.
+end note
+
+note bottom of Indexer
+  Polls RPC via BlockchainService,
+  hands logs to EventProcessor, and
+  flags finalized blocks.
+end note
+
+@enduml
